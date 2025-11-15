@@ -83,15 +83,15 @@ export default function TripForm() {
         {/* Back Button */}
         <button
           onClick={() => navigate('/')}
-          className="flex items-center gap-2 text-slate-600 hover:text-slate-800 mb-6 transition-colors"
+          className="flex items-center gap-2 text-white hover:text-primary mb-6 transition-colors font-body font-semibold"
         >
           <ArrowLeft size={20} />
           <span>Back to trips</span>
         </button>
 
         {/* Form Card */}
-        <div className="glass rounded-2xl p-8 shadow-2xl animate-scale-in">
-          <h1 className="text-3xl font-bold mb-6 bg-gradient-to-r from-primary-600 to-purple-600 bg-clip-text text-transparent">
+        <div className="bg-dark-card border border-primary/30 rounded-elegant p-8 shadow-warm-lg animate-scale-in">
+          <h1 className="text-3xl font-bold font-heading mb-6 text-primary">
             {isEditing ? 'Edit Trip' : 'Create New Trip'}
           </h1>
 

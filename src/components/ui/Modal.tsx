@@ -29,27 +29,27 @@ export default function Modal({ isOpen, onClose, title, children, className }: M
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/85 backdrop-blur-sm"
         onClick={onClose}
       />
 
       {/* Modal */}
       <div
         className={cn(
-          'relative w-full max-w-lg glass rounded-2xl shadow-2xl p-6 animate-scale-in',
+          'relative w-full max-w-lg bg-dark-surface border border-primary/30 rounded-elegant shadow-warm-lg p-6 animate-scale-in',
           className
         )}
       >
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold bg-gradient-to-r from-primary-600 to-purple-600 bg-clip-text text-transparent">
+          <h2 className="text-2xl font-bold font-heading text-primary">
             {title}
           </h2>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
+            className="p-2 rounded-elegant hover:bg-dark border border-transparent hover:border-primary/20 transition-all"
           >
-            <X size={20} className="text-slate-600" />
+            <X size={20} className="text-white" />
           </button>
         </div>
 

@@ -6,6 +6,7 @@ export interface Location {
     lng: number;
   };
   notes?: string;
+  date?: string;
 }
 
 export interface Trip {

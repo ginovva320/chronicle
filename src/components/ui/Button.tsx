@@ -8,19 +8,19 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = 'primary', size = 'md', children, ...props }, ref) => {
-    const baseStyles = 'inline-flex items-center justify-center rounded-xl font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none';
+    const baseStyles = 'inline-flex items-center justify-center rounded-elegant font-semibold font-body transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-0 disabled:opacity-50 disabled:pointer-events-none border hover:scale-[1.02]';
 
     const variants = {
-      primary: 'bg-gradient-to-r from-primary-500 to-purple-500 text-white hover:from-primary-600 hover:to-purple-600 focus:ring-primary-500 shadow-lg hover:shadow-xl',
-      secondary: 'glass text-slate-700 hover:bg-white/90 focus:ring-slate-300 shadow-md hover:shadow-lg',
-      ghost: 'text-slate-700 hover:bg-slate-100 focus:ring-slate-300',
-      danger: 'bg-gradient-to-r from-red-500 to-pink-500 text-white hover:from-red-600 hover:to-pink-600 focus:ring-red-500 shadow-lg hover:shadow-xl'
+      primary: 'bg-primary border-primary text-dark hover:bg-primary-400 hover:border-primary-400 focus:ring-primary/50 hover:shadow-warm',
+      secondary: 'bg-dark-surface border-dark-border text-white hover:bg-dark-lighter hover:border-primary/30 focus:ring-primary/30 hover:shadow-warm',
+      ghost: 'border-transparent text-white hover:bg-dark-surface/50 hover:border-primary/20 focus:ring-primary/30',
+      danger: 'bg-accent border-accent text-white hover:bg-accent-400 hover:border-accent-400 focus:ring-accent/50 hover:shadow-coral'
     };
 
     const sizes = {
-      sm: 'px-3 py-1.5 text-sm',
-      md: 'px-4 py-2 text-base',
-      lg: 'px-6 py-3 text-lg'
+      sm: 'px-4 py-2 text-sm',
+      md: 'px-6 py-2.5 text-base',
+      lg: 'px-8 py-3 text-lg'
     };
 
     return (

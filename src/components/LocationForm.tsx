@@ -20,7 +20,8 @@ export default function LocationForm({ tripId, location, onSave, onCancel }: Loc
     name: '',
     lat: '',
     lng: '',
-    notes: ''
+    notes: '',
+    date: ''
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -30,33 +31,22 @@ export default function LocationForm({ tripId, location, onSave, onCancel }: Loc
   // Load the Google Maps Places library
   const places = useMapsLibrary('places');
 
-  // Debug: Log when places library loads
-  useEffect(() => {
-    console.log('Places library status:', places ? 'loaded' : 'loading...');
-  }, [places]);
-
   useEffect(() => {
     if (location) {
       setFormData({
         name: location.name,
         lat: location.coordinates.lat.toString(),
         lng: location.coordinates.lng.toString(),
-        notes: location.notes || ''
+        notes: location.notes || '',
+        date: location.date || ''
       });
     }
   }, [location]);
 
   useEffect(() => {
-    // Initialize Google Places Autocomplete
-    console.log('Autocomplete effect running', { hasInput: !!autocompleteInputRef.current, hasPlaces: !!places });
-
-    if (!autocompleteInputRef.current || !places) {
-      console.log('Skipping autocomplete init - missing dependencies');
-      return;
-    }
+    if (!autocompleteInputRef.current || !places) return;
 
     try {
-      console.log('Creating autocomplete instance...');
       autocompleteRef.current = new places.Autocomplete(
         autocompleteInputRef.current,
         {
@@ -64,12 +54,8 @@ export default function LocationForm({ tripId, location, onSave, onCancel }: Loc
         }
       );
 
-      console.log('Autocomplete created successfully');
-
       autocompleteRef.current.addListener('place_changed', () => {
-        console.log('Place changed event fired');
         const place = autocompleteRef.current?.getPlace();
-        console.log('Selected place:', place);
 
         if (place?.geometry?.location) {
           setFormData(prev => ({
@@ -79,7 +65,6 @@ export default function LocationForm({ tripId, location, onSave, onCancel }: Loc
             lng: place.geometry.location.lng().toString(),
           }));
 
-          // Clear the autocomplete input
           if (autocompleteInputRef.current) {
             autocompleteInputRef.current.value = '';
           }
@@ -88,14 +73,6 @@ export default function LocationForm({ tripId, location, onSave, onCancel }: Loc
     } catch (error) {
       console.error('Error initializing autocomplete:', error);
     }
-
-    // Cleanup function
-    return () => {
-      if (autocompleteRef.current) {
-        console.log('Cleaning up autocomplete');
-        google.maps.event.clearInstanceListeners(autocompleteRef.current);
-      }
-    };
   }, [places]);
 
   const validate = () => {
@@ -134,7 +111,8 @@ export default function LocationForm({ tripId, location, onSave, onCancel }: Loc
         lat: parseFloat(formData.lat),
         lng: parseFloat(formData.lng)
       },
-      notes: formData.notes.trim()
+      notes: formData.notes.trim(),
+      date: formData.date || undefined
     };
 
     let updatedLocations: Location[];
@@ -153,68 +131,84 @@ export default function LocationForm({ tripId, location, onSave, onCancel }: Loc
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-6">
       {/* Google Places Autocomplete Search */}
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-slate-700 mb-1.5">
-          Search for a place {!places && <span className="text-xs text-orange-500">(Loading...)</span>}
+      <div className="pb-6 border-b border-dark-border/50">
+        <label className="block text-sm font-medium font-heading text-white/90 mb-2">
+          Search for a place {!places && <span className="text-xs text-accent">(Loading...)</span>}
         </label>
         <div className="relative">
-          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-primary" />
           <input
             ref={autocompleteInputRef}
             type="text"
             placeholder={places ? "Start typing to search places..." : "Loading Places API..."}
             disabled={!places}
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 placeholder:text-slate-400 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full pl-10 pr-4 py-2.5 rounded-elegant border border-dark-border bg-dark-card text-white font-body focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/60 transition-all duration-300 placeholder:text-dark-lighter hover:border-primary/30 disabled:opacity-50 disabled:cursor-not-allowed"
           />
         </div>
-        <p className="mt-1.5 text-xs text-slate-500">
+        <p className="mt-1.5 text-xs text-white/60 font-body italic">
           {places ? "Or manually enter location details below" : "Waiting for Google Places API to load..."}
         </p>
       </div>
 
-      <Input
-        id="name"
-        label="Location Name"
-        placeholder="e.g., Eiffel Tower"
-        value={formData.name}
-        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-        error={errors.name}
-      />
-
-      <div className="grid grid-cols-2 gap-4">
+      {/* Location Details Section */}
+      <div className="space-y-5">
         <Input
-          id="lat"
-          label="Latitude"
-          type="number"
-          step="any"
-          placeholder="e.g., 48.8584"
-          value={formData.lat}
-          onChange={(e) => setFormData({ ...formData, lat: e.target.value })}
-          error={errors.lat}
+          id="name"
+          label="Location Name"
+          placeholder="e.g., Eiffel Tower"
+          value={formData.name}
+          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+          error={errors.name}
         />
 
+        {/* Coordinates Group */}
+        <div className="bg-dark-surface/50 rounded-elegant p-4 space-y-4">
+          <h3 className="text-xs font-semibold font-heading text-white/70 uppercase tracking-wide">Coordinates</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              id="lat"
+              label="Latitude"
+              type="number"
+              step="any"
+              placeholder="e.g., 48.8584"
+              value={formData.lat}
+              onChange={(e) => setFormData({ ...formData, lat: e.target.value })}
+              error={errors.lat}
+            />
+
+            <Input
+              id="lng"
+              label="Longitude"
+              type="number"
+              step="any"
+              placeholder="e.g., 2.2945"
+              value={formData.lng}
+              onChange={(e) => setFormData({ ...formData, lng: e.target.value })}
+              error={errors.lng}
+            />
+          </div>
+        </div>
+
+        {/* Date Field */}
         <Input
-          id="lng"
-          label="Longitude"
-          type="number"
-          step="any"
-          placeholder="e.g., 2.2945"
-          value={formData.lng}
-          onChange={(e) => setFormData({ ...formData, lng: e.target.value })}
-          error={errors.lng}
+          id="date"
+          label="Date (optional)"
+          type="date"
+          value={formData.date}
+          onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+        />
+
+        <Textarea
+          id="notes"
+          label="Notes (optional)"
+          placeholder="Add any notes about this location..."
+          rows={3}
+          value={formData.notes}
+          onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
         />
       </div>
-
-      <Textarea
-        id="notes"
-        label="Notes (optional)"
-        placeholder="Add any notes about this location..."
-        rows={3}
-        value={formData.notes}
-        onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-      />
 
       <div className="flex gap-3 pt-2">
         <Button type="submit" variant="primary" className="flex-1">
