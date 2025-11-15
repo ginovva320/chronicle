@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Calendar, MapPin, Trash2, Edit } from 'lucide-react';
-import { APIProvider, Map, AdvancedMarker, InfoWindow } from '@vis.gl/react-google-maps';
+import { APIProvider, Map, AdvancedMarker, InfoWindow, useMap } from '@vis.gl/react-google-maps';
 import type { Trip } from '../types';
 import { StorageService } from '../services/storage';
 import { format } from 'date-fns';
@@ -12,6 +12,7 @@ function TripListContent() {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [selectedMarker, setSelectedMarker] = useState<string | null>(null);
   const navigate = useNavigate();
+  const map = useMap();
 
   useEffect(() => {
     loadTrips();
@@ -37,7 +38,22 @@ function TripListContent() {
   // Filter trips with coordinates for map display
   const tripsWithCoordinates = trips.filter(trip => trip.coordinates);
 
-  // Calculate map center as average of all trip coordinates
+  // Fit map to show all trips
+  useEffect(() => {
+    if (map && tripsWithCoordinates.length > 0) {
+      const bounds = new google.maps.LatLngBounds();
+      tripsWithCoordinates.forEach(trip => {
+        bounds.extend(trip.coordinates!);
+      });
+      map.fitBounds(bounds);
+
+      // Add some padding
+      const padding = { top: 50, right: 50, bottom: 50, left: 50 };
+      map.fitBounds(bounds, padding);
+    }
+  }, [map, tripsWithCoordinates]);
+
+  // Calculate map center as average of all trip coordinates (fallback)
   const mapCenter = tripsWithCoordinates.length > 0
     ? {
         lat: tripsWithCoordinates.reduce((sum, trip) => sum + trip.coordinates!.lat, 0) / tripsWithCoordinates.length,

@@ -6,15 +6,26 @@ import { format } from 'date-fns';
 import type { Trip, Location } from '../types';
 import { StorageService } from '../services/storage';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import LocationForm from '@/components/LocationForm';
 
 function TripDetailContent({ trip, onLocationUpdate }: { trip: Trip; onLocationUpdate: () => void }) {
   const navigate = useNavigate();
-  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
-  const [editingLocation, setEditingLocation] = useState<Location | null>(null);
   const [selectedMarker, setSelectedMarker] = useState<string | null>(null);
   const map = useMap();
+
+  // Fit map to show all locations
+  useEffect(() => {
+    if (map && trip.locations.length > 0) {
+      const bounds = new google.maps.LatLngBounds();
+      trip.locations.forEach(location => {
+        bounds.extend(location.coordinates);
+      });
+      map.fitBounds(bounds);
+
+      // Add some padding
+      const padding = { top: 50, right: 50, bottom: 50, left: 50 };
+      map.fitBounds(bounds, padding);
+    }
+  }, [map, trip.locations]);
 
   // Sort locations by date (dated first, then undated)
   const sortedLocations = [...trip.locations].sort((a, b) => {
@@ -42,16 +53,20 @@ function TripDetailContent({ trip, onLocationUpdate }: { trip: Trip; onLocationU
   };
 
   const handleEditLocation = (location: Location) => {
-    setEditingLocation(location);
-    setIsLocationModalOpen(true);
+    navigate(`/trip/${trip.id}/location/${location.id}/edit`);
   };
 
   const handleAddLocation = () => {
-    setEditingLocation(null);
-    setIsLocationModalOpen(true);
+    navigate(`/trip/${trip.id}/location/new`);
   };
 
-  const mapCenter = trip.locations.length > 0 ? trip.locations[0].coordinates : { lat: 20, lng: 0 };
+  // Calculate map center as average of all location coordinates
+  const mapCenter = trip.locations.length > 0
+    ? {
+        lat: trip.locations.reduce((sum, loc) => sum + loc.coordinates.lat, 0) / trip.locations.length,
+        lng: trip.locations.reduce((sum, loc) => sum + loc.coordinates.lng, 0) / trip.locations.length
+      }
+    : { lat: 20, lng: 0 };
 
   return (
     <div className="h-screen flex flex-col">
@@ -197,34 +212,6 @@ function TripDetailContent({ trip, onLocationUpdate }: { trip: Trip; onLocationU
         </div>
       </div>
     </div>
-
-    {/* Location Dialog */}
-    <Dialog
-      open={isLocationModalOpen}
-      onOpenChange={(open) => {
-        setIsLocationModalOpen(open);
-        if (!open) setEditingLocation(null);
-      }}
-    >
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{editingLocation?.id ? 'Edit Location' : 'Add Location'}</DialogTitle>
-        </DialogHeader>
-        <LocationForm
-          tripId={trip.id}
-          location={editingLocation}
-          onSave={() => {
-            setIsLocationModalOpen(false);
-            setEditingLocation(null);
-            onLocationUpdate();
-          }}
-          onCancel={() => {
-            setIsLocationModalOpen(false);
-            setEditingLocation(null);
-          }}
-        />
-      </DialogContent>
-    </Dialog>
   </div>
   );
 }
