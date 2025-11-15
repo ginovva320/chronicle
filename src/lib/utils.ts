@@ -1,21 +1,12 @@
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import { clsx, type ClassValue } from "clsx"
+import { twMerge } from "tailwind-merge"
 
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
+  return twMerge(clsx(inputs))
 }
 
-export const tripColors = [
-  'bg-primary',
-  'bg-accent',
-  'bg-orange-600',
-  'bg-rose-600',
-  'bg-amber-600',
-  'bg-red-500',
-  'bg-yellow-600',
-  'bg-pink-500',
-];
-
 export function getRandomColor(): string {
-  return tripColors[Math.floor(Math.random() * tripColors.length)];
+  // With shadcn/ui neutral design, we don't need colorful backgrounds
+  // Returning empty string to maintain compatibility
+  return ""
 }

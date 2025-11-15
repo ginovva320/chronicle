@@ -4,9 +4,10 @@ import { nanoid } from 'nanoid';
 import { ArrowLeft } from 'lucide-react';
 import type { Trip } from '../types';
 import { StorageService } from '../services/storage';
-import { getRandomColor } from '../lib/utils';
-import Input from '../components/ui/Input';
-import Button from '../components/ui/Button';
+import { getRandomColor } from '@/lib/utils';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 
 export default function TripForm() {
   const { id } = useParams<{ id: string }>();
@@ -81,50 +82,66 @@ export default function TripForm() {
     <div className="min-h-screen p-6">
       <div className="max-w-2xl mx-auto">
         {/* Back Button */}
-        <button
+        <Button
+          variant="ghost"
           onClick={() => navigate('/')}
-          className="flex items-center gap-2 text-white hover:text-primary mb-6 transition-colors font-body font-semibold"
+          className="mb-6"
         >
           <ArrowLeft size={20} />
           <span>Back to trips</span>
-        </button>
+        </Button>
 
         {/* Form Card */}
-        <div className="bg-dark-card border border-primary/30 rounded-elegant p-8 shadow-warm-lg animate-scale-in">
-          <h1 className="text-3xl font-bold font-heading mb-6 text-primary">
+        <div className="bg-card border rounded-lg p-8 shadow-md">
+          <h1 className="text-3xl font-bold mb-6">
             {isEditing ? 'Edit Trip' : 'Create New Trip'}
           </h1>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            <Input
-              id="name"
-              label="Trip Name"
-              placeholder="e.g., Summer Europe Adventure"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              error={errors.name}
-            />
+            <div className="space-y-2">
+              <Label htmlFor="name">Trip Name</Label>
+              <Input
+                id="name"
+                placeholder="e.g., Summer Europe Adventure"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="bg-background"
+              />
+              {errors.name && (
+                <p className="text-sm text-destructive">{errors.name}</p>
+              )}
+            </div>
 
-            <Input
-              id="startDate"
-              type="date"
-              label="Start Date"
-              value={formData.startDate}
-              onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-              error={errors.startDate}
-            />
+            <div className="space-y-2">
+              <Label htmlFor="startDate">Start Date</Label>
+              <Input
+                id="startDate"
+                type="date"
+                value={formData.startDate}
+                onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                className="bg-background [color-scheme:dark]"
+              />
+              {errors.startDate && (
+                <p className="text-sm text-destructive">{errors.startDate}</p>
+              )}
+            </div>
 
-            <Input
-              id="endDate"
-              type="date"
-              label="End Date"
-              value={formData.endDate}
-              onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-              error={errors.endDate}
-            />
+            <div className="space-y-2">
+              <Label htmlFor="endDate">End Date</Label>
+              <Input
+                id="endDate"
+                type="date"
+                value={formData.endDate}
+                onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                className="bg-background [color-scheme:dark]"
+              />
+              {errors.endDate && (
+                <p className="text-sm text-destructive">{errors.endDate}</p>
+              )}
+            </div>
 
             <div className="flex gap-3 pt-4">
-              <Button type="submit" variant="primary" className="flex-1">
+              <Button type="submit" className="flex-1">
                 {isEditing ? 'Update Trip' : 'Create Trip'}
               </Button>
               <Button

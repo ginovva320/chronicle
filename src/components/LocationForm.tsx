@@ -4,9 +4,10 @@ import { Search } from 'lucide-react';
 import { useMapsLibrary } from '@vis.gl/react-google-maps';
 import type { Location } from '../types';
 import { StorageService } from '../services/storage';
-import Input from './ui/Input';
-import Textarea from './ui/Textarea';
-import Button from './ui/Button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 
 interface LocationFormProps {
   tripId: string;
@@ -133,85 +134,106 @@ export default function LocationForm({ tripId, location, onSave, onCancel }: Loc
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Google Places Autocomplete Search */}
-      <div className="pb-6 border-b border-dark-border/50">
-        <label className="block text-sm font-medium font-heading text-white/90 mb-2">
-          Search for a place {!places && <span className="text-xs text-accent">(Loading...)</span>}
-        </label>
+      <div className="pb-6 border-b">
+        <Label className="mb-2">
+          Search for a place {!places && <span className="text-xs text-muted-foreground">(Loading...)</span>}
+        </Label>
         <div className="relative">
-          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-primary" />
+          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <input
             ref={autocompleteInputRef}
             type="text"
             placeholder={places ? "Start typing to search places..." : "Loading Places API..."}
             disabled={!places}
-            className="w-full pl-10 pr-4 py-2.5 rounded-elegant border border-dark-border bg-dark-card text-white font-body focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/60 transition-all duration-300 placeholder:text-dark-lighter hover:border-primary/30 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex h-9 w-full rounded-md border border-input bg-background pl-10 pr-4 py-1 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
           />
         </div>
-        <p className="mt-1.5 text-xs text-white/60 font-body italic">
+        <p className="mt-1.5 text-xs text-muted-foreground">
           {places ? "Or manually enter location details below" : "Waiting for Google Places API to load..."}
         </p>
       </div>
 
       {/* Location Details Section */}
       <div className="space-y-5">
-        <Input
-          id="name"
-          label="Location Name"
-          placeholder="e.g., Eiffel Tower"
-          value={formData.name}
-          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          error={errors.name}
-        />
+        <div className="space-y-2">
+          <Label htmlFor="name">Location Name</Label>
+          <Input
+            id="name"
+            placeholder="e.g., Eiffel Tower"
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            className="bg-background"
+          />
+          {errors.name && (
+            <p className="text-sm text-destructive">{errors.name}</p>
+          )}
+        </div>
 
         {/* Coordinates Group */}
-        <div className="bg-dark-surface/50 rounded-elegant p-4 space-y-4">
-          <h3 className="text-xs font-semibold font-heading text-white/70 uppercase tracking-wide">Coordinates</h3>
+        <div className="bg-muted/50 rounded-md p-4 space-y-4">
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Coordinates</h3>
           <div className="grid grid-cols-2 gap-4">
-            <Input
-              id="lat"
-              label="Latitude"
-              type="number"
-              step="any"
-              placeholder="e.g., 48.8584"
-              value={formData.lat}
-              onChange={(e) => setFormData({ ...formData, lat: e.target.value })}
-              error={errors.lat}
-            />
+            <div className="space-y-2">
+              <Label htmlFor="lat">Latitude</Label>
+              <Input
+                id="lat"
+                type="number"
+                step="any"
+                placeholder="e.g., 48.8584"
+                value={formData.lat}
+                onChange={(e) => setFormData({ ...formData, lat: e.target.value })}
+                className="bg-background"
+              />
+              {errors.lat && (
+                <p className="text-sm text-destructive">{errors.lat}</p>
+              )}
+            </div>
 
-            <Input
-              id="lng"
-              label="Longitude"
-              type="number"
-              step="any"
-              placeholder="e.g., 2.2945"
-              value={formData.lng}
-              onChange={(e) => setFormData({ ...formData, lng: e.target.value })}
-              error={errors.lng}
-            />
+            <div className="space-y-2">
+              <Label htmlFor="lng">Longitude</Label>
+              <Input
+                id="lng"
+                type="number"
+                step="any"
+                placeholder="e.g., 2.2945"
+                value={formData.lng}
+                onChange={(e) => setFormData({ ...formData, lng: e.target.value })}
+                className="bg-background"
+              />
+              {errors.lng && (
+                <p className="text-sm text-destructive">{errors.lng}</p>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Date Field */}
-        <Input
-          id="date"
-          label="Date (optional)"
-          type="date"
-          value={formData.date}
-          onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-        />
+        <div className="space-y-2">
+          <Label htmlFor="date">Date (optional)</Label>
+          <Input
+            id="date"
+            type="date"
+            value={formData.date}
+            onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+            className="bg-background [color-scheme:dark]"
+          />
+        </div>
 
-        <Textarea
-          id="notes"
-          label="Notes (optional)"
-          placeholder="Add any notes about this location..."
-          rows={3}
-          value={formData.notes}
-          onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-        />
+        <div className="space-y-2">
+          <Label htmlFor="notes">Notes (optional)</Label>
+          <Textarea
+            id="notes"
+            placeholder="Add any notes about this location..."
+            rows={3}
+            value={formData.notes}
+            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+            className="bg-background"
+          />
+        </div>
       </div>
 
       <div className="flex gap-3 pt-2">
-        <Button type="submit" variant="primary" className="flex-1">
+        <Button type="submit" className="flex-1">
           {location?.id ? 'Update Location' : 'Add Location'}
         </Button>
         <Button type="button" variant="secondary" onClick={onCancel}>

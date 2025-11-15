@@ -5,9 +5,9 @@ import { APIProvider, Map, AdvancedMarker, InfoWindow, useMap } from '@vis.gl/re
 import { format } from 'date-fns';
 import type { Trip, Location } from '../types';
 import { StorageService } from '../services/storage';
-import Button from '../components/ui/Button';
-import Modal from '../components/ui/Modal';
-import LocationForm from '../components/LocationForm';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import LocationForm from '@/components/LocationForm';
 
 function TripDetailContent({ trip, onLocationUpdate }: { trip: Trip; onLocationUpdate: () => void }) {
   const navigate = useNavigate();
@@ -71,25 +71,26 @@ function TripDetailContent({ trip, onLocationUpdate }: { trip: Trip; onLocationU
   return (
     <div className="h-screen flex flex-col">
       {/* Header */}
-      <div className="bg-dark-surface border-b border-dark-border p-4">
+      <div className="bg-card border-b p-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => navigate('/')}
-              className="p-2 hover:bg-primary/20 border border-transparent hover:border-primary/30 rounded-elegant transition-all"
             >
-              <ArrowLeft size={20} className="text-white" />
-            </button>
+              <ArrowLeft size={20} />
+            </Button>
             <div>
-              <h1 className="text-2xl font-bold font-heading text-primary">{trip.name}</h1>
-              <p className="text-sm text-white/80 flex items-center gap-2 font-body">
+              <h1 className="text-2xl font-bold">{trip.name}</h1>
+              <p className="text-sm text-muted-foreground flex items-center gap-2">
                 <Calendar size={14} />
                 {format(new Date(trip.startDate), 'MMM d')} - {format(new Date(trip.endDate), 'MMM d, yyyy')}
               </p>
             </div>
           </div>
           <Button onClick={handleAddLocation} size="sm">
-            <Plus size={16} className="mr-2" />
+            <Plus size={16} />
             Add Location
           </Button>
         </div>
@@ -113,7 +114,13 @@ function TripDetailContent({ trip, onLocationUpdate }: { trip: Trip; onLocationU
                 position={location.coordinates}
                 onClick={() => centerOnLocation(location)}
               >
-                <div className="w-8 h-8 bg-primary border border-dark rounded-elegant shadow-warm hover:scale-110 transition-transform cursor-pointer" />
+                <div className="cursor-pointer hover:scale-110 transition-transform">
+                  <MapPin
+                    size={32}
+                    className="fill-primary text-primary-foreground drop-shadow-lg"
+                    strokeWidth={1.5}
+                  />
+                </div>
               </AdvancedMarker>
             ))}
 
@@ -122,12 +129,12 @@ function TripDetailContent({ trip, onLocationUpdate }: { trip: Trip; onLocationU
                 position={trip.locations.find(l => l.id === selectedMarker)?.coordinates}
                 onCloseClick={() => setSelectedMarker(null)}
               >
-                <div className="p-3 bg-dark-card rounded-elegant min-w-[200px]">
-                  <h3 className="font-bold font-heading text-sm text-primary">
+                <div className="p-3 bg-card rounded-md min-w-[200px]">
+                  <h3 className="font-bold text-sm">
                     {trip.locations.find(l => l.id === selectedMarker)?.name}
                   </h3>
                   {trip.locations.find(l => l.id === selectedMarker)?.notes && (
-                    <p className="text-xs text-white/80 mt-1.5 font-body">
+                    <p className="text-xs text-muted-foreground mt-1.5">
                       {trip.locations.find(l => l.id === selectedMarker)?.notes}
                     </p>
                   )}
@@ -137,69 +144,71 @@ function TripDetailContent({ trip, onLocationUpdate }: { trip: Trip; onLocationU
           </Map>
 
           {/* Map Hint */}
-          <div className="absolute bottom-4 left-4 bg-dark-surface/90 backdrop-blur-sm border border-primary/30 rounded-elegant px-4 py-2 shadow-warm">
-            <p className="text-sm text-white/90 font-body">Click on the map to add a location</p>
+          <div className="absolute bottom-4 left-4 bg-card/90 backdrop-blur-sm border rounded-md px-4 py-2 shadow-sm">
+            <p className="text-sm">Click on the map to add a location</p>
           </div>
         </div>
 
       {/* Locations Sidebar */}
-      <div className="w-96 bg-dark-surface border-l border-dark-border overflow-y-auto">
+      <div className="w-96 bg-card border-l overflow-y-auto">
         <div className="p-6">
-          <h2 className="text-lg font-bold font-heading text-primary mb-4 flex items-center gap-2">
-            <MapPin size={20} className="text-primary" />
+          <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+            <MapPin size={20} />
             Locations ({trip.locations.length})
           </h2>
 
           {trip.locations.length === 0 ? (
-            <div className="text-center py-12 text-white/80">
+            <div className="text-center py-12 text-muted-foreground">
               <MapPin size={48} className="mx-auto mb-3 opacity-50" />
-              <p className="text-sm font-body">No locations yet</p>
-              <p className="text-xs mt-1 font-body">Click the map or button to add</p>
+              <p className="text-sm">No locations yet</p>
+              <p className="text-xs mt-1">Click the map or button to add</p>
             </div>
           ) : (
             <div className="space-y-3">
               {sortedLocations.map((location, index) => (
                 <div
                   key={location.id}
-                  className="bg-dark-card border border-dark-border rounded-elegant p-4 hover:border-primary/50 hover:shadow-warm transition-all cursor-pointer"
+                  className="bg-muted/50 border rounded-md p-4 hover:bg-muted transition-all cursor-pointer"
                   onClick={() => centerOnLocation(location)}
                 >
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex items-start gap-2 flex-1">
-                      <div className="w-7 h-7 bg-primary border-2 border-primary rounded-full flex items-center justify-center text-dark text-xs font-bold font-heading shadow-warm shrink-0">
+                      <div className="w-7 h-7 bg-primary border-2 border-primary rounded-full flex items-center justify-center text-primary-foreground text-xs font-bold shrink-0">
                         {index + 1}
                       </div>
                       <div className="flex-1">
-                        <h3 className="font-bold font-heading text-white text-sm">{location.name}</h3>
+                        <h3 className="font-bold text-sm">{location.name}</h3>
                         {location.date && (
-                          <p className="text-xs text-primary mt-1 font-body font-medium">
+                          <p className="text-xs mt-1 font-medium">
                             {format(new Date(location.date), 'MMM d, yyyy')}
                           </p>
                         )}
                         {location.notes && (
-                          <p className="text-xs text-white/70 mt-1 line-clamp-2 font-body">{location.notes}</p>
+                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{location.notes}</p>
                         )}
                       </div>
                     </div>
                     <div className="flex gap-1">
-                      <button
+                      <Button
+                        size="icon"
+                        variant="ghost"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleEditLocation(location);
                         }}
-                        className="p-1.5 hover:bg-primary/20 border border-transparent hover:border-primary/30 rounded-elegant transition-all"
                       >
-                        <Edit2 size={14} className="text-white" />
-                      </button>
-                      <button
+                        <Edit2 size={14} />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleDeleteLocation(location.id);
                         }}
-                        className="p-1.5 hover:bg-accent/20 border border-transparent hover:border-accent/30 rounded-elegant transition-all"
                       >
-                        <Trash2 size={14} className="text-white" />
-                      </button>
+                        <Trash2 size={14} />
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -210,29 +219,33 @@ function TripDetailContent({ trip, onLocationUpdate }: { trip: Trip; onLocationU
       </div>
     </div>
 
-    {/* Location Modal */}
-    <Modal
-      isOpen={isLocationModalOpen}
-      onClose={() => {
-        setIsLocationModalOpen(false);
-        setEditingLocation(null);
+    {/* Location Dialog */}
+    <Dialog
+      open={isLocationModalOpen}
+      onOpenChange={(open) => {
+        setIsLocationModalOpen(open);
+        if (!open) setEditingLocation(null);
       }}
-      title={editingLocation?.id ? 'Edit Location' : 'Add Location'}
     >
-      <LocationForm
-        tripId={trip.id}
-        location={editingLocation}
-        onSave={() => {
-          setIsLocationModalOpen(false);
-          setEditingLocation(null);
-          onLocationUpdate();
-        }}
-        onCancel={() => {
-          setIsLocationModalOpen(false);
-          setEditingLocation(null);
-        }}
-      />
-    </Modal>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{editingLocation?.id ? 'Edit Location' : 'Add Location'}</DialogTitle>
+        </DialogHeader>
+        <LocationForm
+          tripId={trip.id}
+          location={editingLocation}
+          onSave={() => {
+            setIsLocationModalOpen(false);
+            setEditingLocation(null);
+            onLocationUpdate();
+          }}
+          onCancel={() => {
+            setIsLocationModalOpen(false);
+            setEditingLocation(null);
+          }}
+        />
+      </DialogContent>
+    </Dialog>
   </div>
   );
 }
@@ -258,7 +271,7 @@ export default function TripDetail() {
   if (!trip) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="text-white font-body">Loading...</p>
+        <p className="text-muted-foreground">Loading...</p>
       </div>
     );
   }
