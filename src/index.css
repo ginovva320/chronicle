@@ -119,3 +119,8 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Google Places Autocomplete dropdown - ensure it appears above dialogs */
+.pac-container {
+  z-index: 9999 !important;
+}

@@ -7,7 +7,7 @@ import { StorageService } from '../services/storage';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
+import { Field, FieldLabel, FieldError, FieldGroup } from '@/components/ui/field';
 
 interface LocationFormProps {
   tripId: string;
@@ -132,95 +132,88 @@ export default function LocationForm({ tripId, location, onSave, onCancel }: Loc
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Google Places Autocomplete Search */}
-      <div className="pb-6 border-b">
-        <Label className="mb-2">
-          Search for a place {!places && <span className="text-xs text-muted-foreground">(Loading...)</span>}
-        </Label>
-        <div className="relative">
-          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <input
-            ref={autocompleteInputRef}
-            type="text"
-            placeholder={places ? "Start typing to search places..." : "Loading Places API..."}
-            disabled={!places}
-            className="flex h-9 w-full rounded-md border border-input bg-background pl-10 pr-4 py-1 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
-          />
-        </div>
-        <p className="mt-1.5 text-xs text-muted-foreground">
-          {places ? "Or manually enter location details below" : "Waiting for Google Places API to load..."}
-        </p>
-      </div>
+    <form onSubmit={handleSubmit}>
+      <FieldGroup>
+        {/* Google Places Autocomplete Search */}
+        <Field>
+          <FieldLabel>
+            Search for a place {!places && <span className="text-xs text-muted-foreground">(Loading...)</span>}
+          </FieldLabel>
+          <div className="relative">
+            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <input
+              ref={autocompleteInputRef}
+              type="text"
+              placeholder={places ? "Start typing to search places..." : "Loading Places API..."}
+              disabled={!places}
+              className="flex h-9 w-full rounded-md border border-input bg-background pl-10 pr-4 py-1 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+            />
+          </div>
+        </Field>
 
-      {/* Location Details Section */}
-      <div className="space-y-5">
-        <div className="space-y-2">
-          <Label htmlFor="name">Location Name</Label>
+        {/* Coordinates Display */}
+        {(formData.lat && formData.lng) ? (
+          <div className="bg-muted/50 rounded-md p-4">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Coordinates</p>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div>
+                <span className="text-muted-foreground">Latitude:</span>
+                <p className="font-medium">{formData.lat}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Longitude:</span>
+                <p className="font-medium">{formData.lng}</p>
+              </div>
+            </div>
+            {(errors.lat || errors.lng) && (
+              <div className="mt-2">
+                <FieldError>{errors.lat || errors.lng}</FieldError>
+              </div>
+            )}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setFormData({ ...formData, lat: '', lng: '', name: '' })}
+              className="mt-3 text-xs"
+            >
+              Clear location
+            </Button>
+          </div>
+        ) : (
+          <div className="text-sm text-muted-foreground p-4 bg-muted/30 rounded-md">
+            Search for a place above to set coordinates
+          </div>
+        )}
+
+        {/* Location Details Section */}
+        <Field>
+          <FieldLabel htmlFor="name">Location Name</FieldLabel>
           <Input
             id="name"
             placeholder="e.g., Eiffel Tower"
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             className="bg-background"
+            aria-invalid={!!errors.name}
           />
-          {errors.name && (
-            <p className="text-sm text-destructive">{errors.name}</p>
-          )}
-        </div>
-
-        {/* Coordinates Group */}
-        <div className="bg-muted/50 rounded-md p-4 space-y-4">
-          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Coordinates</h3>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="lat">Latitude</Label>
-              <Input
-                id="lat"
-                type="number"
-                step="any"
-                placeholder="e.g., 48.8584"
-                value={formData.lat}
-                onChange={(e) => setFormData({ ...formData, lat: e.target.value })}
-                className="bg-background"
-              />
-              {errors.lat && (
-                <p className="text-sm text-destructive">{errors.lat}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="lng">Longitude</Label>
-              <Input
-                id="lng"
-                type="number"
-                step="any"
-                placeholder="e.g., 2.2945"
-                value={formData.lng}
-                onChange={(e) => setFormData({ ...formData, lng: e.target.value })}
-                className="bg-background"
-              />
-              {errors.lng && (
-                <p className="text-sm text-destructive">{errors.lng}</p>
-              )}
-            </div>
-          </div>
-        </div>
+          <FieldError>{errors.name}</FieldError>
+        </Field>
 
         {/* Date Field */}
-        <div className="space-y-2">
-          <Label htmlFor="date">Date (optional)</Label>
+        <Field>
+          <FieldLabel htmlFor="date">Date (optional)</FieldLabel>
           <Input
             id="date"
             type="date"
             value={formData.date}
             onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-            className="bg-background [color-scheme:dark]"
+            className="bg-background [color-scheme:light]"
           />
-        </div>
+        </Field>
 
-        <div className="space-y-2">
-          <Label htmlFor="notes">Notes (optional)</Label>
+        <Field>
+          <FieldLabel htmlFor="notes">Notes (optional)</FieldLabel>
           <Textarea
             id="notes"
             placeholder="Add any notes about this location..."
@@ -229,8 +222,8 @@ export default function LocationForm({ tripId, location, onSave, onCancel }: Loc
             onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
             className="bg-background"
           />
-        </div>
-      </div>
+        </Field>
+      </FieldGroup>
 
       <div className="flex gap-3 pt-2">
         <Button type="submit" className="flex-1">

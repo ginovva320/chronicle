@@ -16,4 +16,9 @@ export interface Trip {
   endDate: string;
   locations: Location[];
   color: string; // For visual distinction on the UI
+  coordinates?: {
+    lat: number;
+    lng: number;
+  };
+  notes?: string;
 }

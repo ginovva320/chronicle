@@ -51,21 +51,6 @@ function TripDetailContent({ trip, onLocationUpdate }: { trip: Trip; onLocationU
     setIsLocationModalOpen(true);
   };
 
-  const handleMapClick = (e: any) => {
-    if (e.detail?.latLng) {
-      setEditingLocation({
-        id: '',
-        name: '',
-        coordinates: {
-          lat: e.detail.latLng.lat,
-          lng: e.detail.latLng.lng
-        },
-        notes: ''
-      });
-      setIsLocationModalOpen(true);
-    }
-  };
-
   const mapCenter = trip.locations.length > 0 ? trip.locations[0].coordinates : { lat: 20, lng: 0 };
 
   return (
@@ -104,9 +89,8 @@ function TripDetailContent({ trip, onLocationUpdate }: { trip: Trip; onLocationU
             defaultCenter={mapCenter}
             defaultZoom={trip.locations.length > 0 ? 8 : 2}
             mapId="travelog-map"
-            onClick={handleMapClick}
             className="w-full h-full"
-            colorScheme="DARK"
+            colorScheme="LIGHT"
           >
             {trip.locations.map((location) => (
               <AdvancedMarker
@@ -142,11 +126,6 @@ function TripDetailContent({ trip, onLocationUpdate }: { trip: Trip; onLocationU
               </InfoWindow>
             )}
           </Map>
-
-          {/* Map Hint */}
-          <div className="absolute bottom-4 left-4 bg-card/90 backdrop-blur-sm border rounded-md px-4 py-2 shadow-sm">
-            <p className="text-sm">Click on the map to add a location</p>
-          </div>
         </div>
 
       {/* Locations Sidebar */}
