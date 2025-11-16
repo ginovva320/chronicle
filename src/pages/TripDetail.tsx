@@ -71,28 +71,25 @@ function TripDetailContent({ trip, onLocationUpdate }: { trip: Trip; onLocationU
   return (
     <div className="h-screen flex flex-col">
       {/* Header */}
-      <div className="bg-card border-b p-4">
+      <div className="bg-card border-b border-border p-6 flex-shrink-0 shadow-sm">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
               size="icon"
               onClick={() => navigate('/')}
+              className="hover:bg-accent hover:text-accent-foreground"
             >
               <ArrowLeft size={20} />
             </Button>
             <div>
-              <h1 className="text-2xl font-bold">{trip.name}</h1>
-              <p className="text-sm text-muted-foreground flex items-center gap-2">
+              <h1 className="text-3xl font-bold decorative-underline">{trip.name}</h1>
+              <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
                 <Calendar size={14} />
                 {format(new Date(trip.startDate), 'MMM d')} - {format(new Date(trip.endDate), 'MMM d, yyyy')}
               </p>
             </div>
           </div>
-          <Button onClick={handleAddLocation} size="sm">
-            <Plus size={16} />
-            Add Location
-          </Button>
         </div>
       </div>
 
@@ -116,6 +113,7 @@ function TripDetailContent({ trip, onLocationUpdate }: { trip: Trip; onLocationU
                 <div className="cursor-pointer hover:scale-110 transition-transform">
                   <MapPin
                     size={32}
+                    color={trip.color || '#ffffffff'}
                     className="fill-primary text-primary-foreground drop-shadow-lg"
                     strokeWidth={1.5}
                   />
@@ -128,12 +126,12 @@ function TripDetailContent({ trip, onLocationUpdate }: { trip: Trip; onLocationU
                 position={trip.locations.find(l => l.id === selectedMarker)?.coordinates}
                 onCloseClick={() => setSelectedMarker(null)}
               >
-                <div className="p-3 bg-card rounded-md min-w-[200px]">
+                <div className="p-1">
                   <h3 className="font-bold text-sm">
                     {trip.locations.find(l => l.id === selectedMarker)?.name}
                   </h3>
                   {trip.locations.find(l => l.id === selectedMarker)?.notes && (
-                    <p className="text-xs text-muted-foreground mt-1.5">
+                    <p className="text-xs text-muted-foreground mt-1">
                       {trip.locations.find(l => l.id === selectedMarker)?.notes}
                     </p>
                   )}
@@ -144,13 +142,20 @@ function TripDetailContent({ trip, onLocationUpdate }: { trip: Trip; onLocationU
         </div>
 
       {/* Locations Sidebar */}
-      <div className="w-96 bg-card border-l overflow-y-auto">
-        <div className="p-6">
-          <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-            <MapPin size={20} />
+      <div className="w-96 bg-sidebar border-l border-border flex flex-col shadow-lg">
+        {/* Fixed Header */}
+        <div className="p-6 border-b border-border flex items-center justify-between flex-shrink-0 bg-card/50">
+          <h2 className="text-xl font-bold decorative-underline">
             Locations ({trip.locations.length})
           </h2>
+          <Button onClick={handleAddLocation} size="sm" className="shadow-md hover:shadow-lg transition-shadow">
+            <Plus size={16} className="mr-2" />
+            Add Location
+          </Button>
+        </div>
 
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto p-6">
           {trip.locations.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <MapPin size={48} className="mx-auto mb-3 opacity-50" />
@@ -162,30 +167,41 @@ function TripDetailContent({ trip, onLocationUpdate }: { trip: Trip; onLocationU
               {sortedLocations.map((location, index) => (
                 <div
                   key={location.id}
-                  className="bg-muted/50 border rounded-md p-4 hover:bg-muted transition-all cursor-pointer"
+                  className="group relative bg-card border border-border rounded-xl p-4 cursor-pointer transition-all duration-200 hover:shadow-lg"
                   onClick={() => centerOnLocation(location)}
+                  style={{
+                    animation: `card-enter 0.4s ease-out ${index * 0.05}s backwards`,
+                  }}
                 >
                   <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-start gap-2 flex-1">
-                      <div className="w-7 h-7 bg-primary border-2 border-primary rounded-full flex items-center justify-center text-primary-foreground text-xs font-bold shrink-0">
+                    <div className="flex items-start gap-3 flex-1">
+                      <div
+                        className="w-9 h-9 stamp-badge rounded-full flex items-center justify-center text-xs font-bold shrink-0 text-white"
+                        style={{
+                          backgroundColor: trip.color || '#8B5A3C',
+                          color: '#FFFDFB'
+                        }}
+                      >
                         {index + 1}
                       </div>
                       <div className="flex-1">
-                        <h3 className="font-bold text-sm">{location.name}</h3>
+                        <h3 className="font-bold text-base">{location.name}</h3>
                         {location.date && (
-                          <p className="text-xs mt-1 font-medium">
+                          <p className="text-xs mt-1.5 font-medium text-muted-foreground flex items-center gap-1.5">
+                            <Calendar size={12} />
                             {format(new Date(location.date), 'MMM d, yyyy')}
                           </p>
                         )}
                         {location.notes && (
-                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{location.notes}</p>
+                          <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{location.notes}</p>
                         )}
                       </div>
                     </div>
-                    <div className="flex gap-1">
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Button
                         size="icon"
                         variant="ghost"
+                        className="h-8 w-8 hover:bg-accent hover:text-accent-foreground"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleEditLocation(location);
@@ -196,6 +212,7 @@ function TripDetailContent({ trip, onLocationUpdate }: { trip: Trip; onLocationU
                       <Button
                         size="icon"
                         variant="ghost"
+                        className="h-8 w-8 hover:bg-destructive hover:text-destructive-foreground"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleDeleteLocation(location.id);

@@ -64,12 +64,12 @@ function TripListContent() {
   return (
     <div className="h-screen flex flex-col">
       {/* Header */}
-      <div className="bg-card border-b p-6 flex-shrink-0">
+      <div className="bg-card border-b border-border p-6 flex-shrink-0 shadow-sm">
         <div className="max-w-7xl mx-auto">
-          <h1 className="text-4xl font-bold mb-2">
+          <h1 className="text-5xl font-bold mb-2 decorative-underline">
             My Travel Adventures
           </h1>
-          <p className="text-muted-foreground">Track your journeys around the world</p>
+          <p className="text-muted-foreground text-lg">Track your journeys around the world</p>
         </div>
       </div>
 
@@ -93,6 +93,7 @@ function TripListContent() {
                 <div className="cursor-pointer hover:scale-110 transition-transform">
                   <MapPin
                     size={32}
+                    color={trip.color || '#ffffffff'}
                     className="fill-primary text-primary-foreground drop-shadow-lg"
                     strokeWidth={1.5}
                   />
@@ -107,7 +108,7 @@ function TripListContent() {
                   position={selectedTrip.coordinates}
                   onCloseClick={() => setSelectedMarker(null)}
                 >
-                  <div className="p-2 min-w-[150px]">
+                  <div className="p-1">
                     <h3 className="font-bold text-sm">
                       {selectedTrip.name}
                     </h3>
@@ -132,13 +133,13 @@ function TripListContent() {
         </div>
 
         {/* Trips Sidebar */}
-        <div className="w-96 bg-card border-l flex flex-col">
+        <div className="w-96 bg-sidebar border-l border-border flex flex-col shadow-lg">
           {/* Fixed Header */}
-          <div className="p-6 border-b flex items-center justify-between flex-shrink-0">
-            <h2 className="text-lg font-bold">
+          <div className="p-6 border-b border-border flex items-center justify-between flex-shrink-0 bg-card/50">
+            <h2 className="text-xl font-bold decorative-underline">
               Trips ({trips.length})
             </h2>
-            <Button onClick={() => navigate('/trip/new')} size="sm">
+            <Button onClick={() => navigate('/trip/new')} size="sm" className="shadow-md hover:shadow-lg transition-shadow">
               <Plus size={16} className="mr-2" />
               Create Trip
             </Button>
@@ -153,21 +154,30 @@ function TripListContent() {
               </div>
             ) : (
               <div className="space-y-3">
-                {trips.map((trip) => (
+                {trips.map((trip, index) => (
                   <div
                     key={trip.id}
-                    className="group bg-muted/50 border rounded-md p-4 hover:bg-muted transition-all cursor-pointer"
+                    className="group relative bg-card border border-border rounded-xl p-4 cursor-pointer overflow-hidden transition-all duration-200 hover:shadow-lg"
                     onClick={() => navigate(`/trip/${trip.id}`)}
+                    style={{
+                      animation: `card-enter 0.4s ease-out ${index * 0.05}s backwards`,
+                    }}
                   >
-                    <div className="flex items-start justify-between mb-2">
-                      <h3 className="font-bold text-sm line-clamp-2 flex-1">
+                    {/* Color accent strip */}
+                    <div
+                      className="trip-accent-strip"
+                      style={{ color: trip.color || '#8B5A3C' }}
+                    />
+
+                    <div className="flex items-start justify-between mb-2 pl-3">
+                      <h3 className="font-bold text-base line-clamp-2 flex-1">
                         {trip.name}
                       </h3>
                       <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <Button
                           size="icon"
                           variant="ghost"
-                          className="h-7 w-7 hover:bg-accent hover:text-accent-foreground"
+                          className="h-8 w-8 hover:bg-accent hover:text-accent-foreground"
                           onClick={(e) => {
                             e.stopPropagation();
                             navigate(`/trip/${trip.id}/edit`);
@@ -178,7 +188,7 @@ function TripListContent() {
                         <Button
                           size="icon"
                           variant="ghost"
-                          className="h-7 w-7 hover:bg-destructive hover:text-destructive-foreground"
+                          className="h-8 w-8 hover:bg-destructive hover:text-destructive-foreground"
                           onClick={(e) => handleDeleteTrip(trip.id, e)}
                         >
                           <Trash2 size={14} />
@@ -186,17 +196,17 @@ function TripListContent() {
                       </div>
                     </div>
 
-                    <div className="space-y-1">
+                    <div className="space-y-1.5 pl-3">
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <Calendar size={12} />
-                        <span>
+                        <Calendar size={13} />
+                        <span className="font-medium">
                           {format(new Date(trip.startDate), 'MMM d')} - {format(new Date(trip.endDate), 'MMM d, yyyy')}
                         </span>
                       </div>
 
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <MapPin size={12} />
-                        <span>
+                        <MapPin size={13} />
+                        <span className="font-medium">
                           {trip.locations.length} {trip.locations.length === 1 ? 'location' : 'locations'}
                         </span>
                       </div>

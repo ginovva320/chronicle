@@ -5,38 +5,41 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --radius: 0.5rem;
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  /* Warm "aged paper" color palette */
+  --background: #FAF7F2;
+  --foreground: #2A1810;
+  --radius: 0.75rem;
+  --card: #FFFDFB;
+  --card-foreground: #2A1810;
+  --popover: #FFFDFB;
+  --popover-foreground: #2A1810;
+  --primary: #8B5A3C;
+  --primary-foreground: #FFFDFB;
+  --secondary: #D4A574;
+  --secondary-foreground: #2A1810;
+  --muted: #F0E8DD;
+  --muted-foreground: #6B5747;
+  --accent: #C17F4A;
+  --accent-foreground: #FFFDFB;
+  --destructive: #B85042;
+  --destructive-foreground: #FFFDFB;
+  --border: #E0D3C1;
+  --input: #E0D3C1;
+  --ring: #8B5A3C;
+
+  /* Sidebar uses slightly darker paper tone */
+  --sidebar: #F5F0E8;
+  --sidebar-foreground: #2A1810;
+  --sidebar-primary: #8B5A3C;
+  --sidebar-primary-foreground: #FFFDFB;
+  --sidebar-accent: #D4A574;
+  --sidebar-accent-foreground: #2A1810;
+  --sidebar-border: #E0D3C1;
+  --sidebar-ring: #8B5A3C;
+
+  /* Font families */
+  --font-display: 'Work Sans', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
 }
 
 @theme inline {
@@ -115,12 +118,104 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-body);
+    position: relative;
+  }
+
+  /* Subtle paper texture overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0.03;
+    pointer-events: none;
+    background-image:
+      repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,.03) 2px, rgba(0,0,0,.03) 4px),
+      repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(0,0,0,.03) 2px, rgba(0,0,0,.03) 4px);
+    z-index: 1;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    font-weight: 700;
   }
 }
 
 /* Google Places Autocomplete dropdown - ensure it appears above dialogs */
 .pac-container {
   z-index: 9999 !important;
+}
+
+/* Card hover animation */
+@keyframes card-lift {
+  from {
+    transform: translateY(0) scale(1);
+    box-shadow: 0 1px 3px 0 rgba(42, 24, 16, 0.1);
+  }
+  to {
+    transform: translateY(-2px) scale(1.005);
+    box-shadow: 0 8px 16px -4px rgba(42, 24, 16, 0.15), 0 4px 8px -2px rgba(42, 24, 16, 0.1);
+  }
+}
+
+/* Staggered card entrance */
+@keyframes card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Decorative underline for headers */
+.decorative-underline {
+  position: relative;
+  display: inline-block;
+}
+
+.decorative-underline::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -4px;
+  width: 60px;
+  height: 3px;
+  background: linear-gradient(90deg, var(--primary), var(--accent));
+  border-radius: 2px;
+}
+
+/* Trip color accent strip */
+.trip-accent-strip {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: currentColor;
+  border-radius: 12px 0 0 12px;
+}
+
+/* Stamp badge styling */
+.stamp-badge {
+  position: relative;
+  box-shadow: 0 2px 4px rgba(42, 24, 16, 0.15);
+}
+
+.stamp-badge::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border: 2px dashed currentColor;
+  opacity: 0.3;
+  border-radius: inherit;
+  pointer-events: none;
 }
