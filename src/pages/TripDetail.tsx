@@ -125,11 +125,13 @@ function TripDetailContent({ trip, onLocationUpdate }: { trip: Trip; onLocationU
               <InfoWindow
                 position={trip.locations.find(l => l.id === selectedMarker)?.coordinates}
                 onCloseClick={() => setSelectedMarker(null)}
-              >
-                <div className="p-1">
+                headerContent={
                   <h3 className="font-bold text-sm">
                     {trip.locations.find(l => l.id === selectedMarker)?.name}
                   </h3>
+                }
+              >
+                <div className="p-1">
                   {trip.locations.find(l => l.id === selectedMarker)?.notes && (
                     <p className="text-xs text-muted-foreground mt-1">
                       {trip.locations.find(l => l.id === selectedMarker)?.notes}

@@ -107,11 +107,13 @@ function TripListContent() {
                 <InfoWindow
                   position={selectedTrip.coordinates}
                   onCloseClick={() => setSelectedMarker(null)}
-                >
-                  <div className="p-1">
+                  headerContent={
                     <h3 className="font-bold text-sm">
                       {selectedTrip.name}
                     </h3>
+                  }
+                >
+                  <div className="p-1">
                     <p className="text-xs text-muted-foreground mt-1">
                       {format(new Date(selectedTrip.startDate), 'MMM d')} - {format(new Date(selectedTrip.endDate), 'MMM d, yyyy')}
                     </p>
