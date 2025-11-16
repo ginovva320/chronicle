@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Calendar, Trash2, Edit2, MapPin } from 'lucide-react';
+import { ArrowLeft, Calendar, Trash2, Edit2, MapPin, PlusIcon } from 'lucide-react';
 import { APIProvider, Map, AdvancedMarker, InfoWindow, useMap } from '@vis.gl/react-google-maps';
 import { format } from 'date-fns';
 import type { Trip, Location } from '../types';
@@ -72,24 +72,12 @@ function TripDetailContent({ trip, onLocationUpdate }: { trip: Trip; onLocationU
     <div className="h-screen flex flex-col">
       {/* Header */}
       <div className="bg-card border-b border-border p-6 flex-shrink-0 shadow-sm">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate('/')}
-              className="hover:bg-accent hover:text-accent-foreground"
-            >
-              <ArrowLeft size={20} />
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold decorative-underline">{trip.name}</h1>
-              <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
-                <Calendar size={14} />
-                {format(new Date(trip.startDate), 'MMM d')} - {format(new Date(trip.endDate), 'MMM d, yyyy')}
-              </p>
-            </div>
-          </div>
+        <div className="max-w-7xl mx-auto">
+          <h1 className="text-3xl font-bold decorative-underline">{trip.name}</h1>
+          <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
+            <Calendar size={14} />
+            {format(new Date(trip.startDate), 'MMM d')} - {format(new Date(trip.endDate), 'MMM d, yyyy')}
+          </p>
         </div>
       </div>
 
@@ -147,12 +135,21 @@ function TripDetailContent({ trip, onLocationUpdate }: { trip: Trip; onLocationU
       <div className="w-96 bg-sidebar border-l border-border flex flex-col shadow-lg">
         {/* Fixed Header */}
         <div className="p-6 border-b border-border flex items-center justify-between flex-shrink-0 bg-card/50">
-          <h2 className="text-xl font-bold decorative-underline">
-            Locations ({trip.locations.length})
-          </h2>
-          <Button onClick={handleAddLocation} size="sm" className="shadow-md hover:shadow-lg transition-shadow">
-            <Plus size={16} className="mr-2" />
-            Add Location
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate('/')}
+              className="hover:bg-accent hover:text-accent-foreground h-8 w-8"
+            >
+              <ArrowLeft size={18} />
+            </Button>
+            <h2 className="text-xl font-bold decorative-underline">
+              Locations ({trip.locations.length})
+            </h2>
+          </div>
+          <Button onClick={handleAddLocation} size="icon" className="shadow-md hover:shadow-lg transition-shadow">
+            <PlusIcon/>
           </Button>
         </div>
 

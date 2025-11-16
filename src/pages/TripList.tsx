@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Calendar, MapPin, Trash2, Edit } from 'lucide-react';
+import { Calendar, MapPin, Trash2, Edit, PlusIcon } from 'lucide-react';
 import { APIProvider, Map, AdvancedMarker, InfoWindow, useMap } from '@vis.gl/react-google-maps';
 import type { Trip } from '../types';
 import { StorageService } from '../services/storage';
 import { format } from 'date-fns';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
 function TripListContent() {
@@ -117,9 +116,11 @@ function TripListContent() {
                     <p className="text-xs text-muted-foreground mt-1">
                       {format(new Date(selectedTrip.startDate), 'MMM d')} - {format(new Date(selectedTrip.endDate), 'MMM d, yyyy')}
                     </p>
+                    { selectedTrip.locations.length > 0 && (
                     <p className="text-xs text-muted-foreground">
                       {selectedTrip.locations.length} locations
                     </p>
+                  )}
                     <Button
                       size="sm"
                       className="mt-2 w-full text-xs"
@@ -141,9 +142,8 @@ function TripListContent() {
             <h2 className="text-xl font-bold decorative-underline">
               Trips ({trips.length})
             </h2>
-            <Button onClick={() => navigate('/trip/new')} size="sm" className="shadow-md hover:shadow-lg transition-shadow">
-              <Plus size={16} className="mr-2" />
-              Create Trip
+            <Button onClick={() => navigate('/trip/new')} size="icon" className="shadow-md hover:shadow-lg transition-shadow">
+              <PlusIcon />
             </Button>
           </div>
 
