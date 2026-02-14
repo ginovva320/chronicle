@@ -93,7 +93,11 @@ func initDB() error {
 	);`
 
 	_, err = db.Exec(sqlStmt)
-	return err
+	if err != nil {
+		return err
+	}
+
+	return seedTripsIfEmpty(db)
 }
 
 // GetTrips retrieves all trips from the database.
