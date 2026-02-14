@@ -8,7 +8,7 @@ A sleek, modern travel tracking app built with React, TypeScript, and Google Map
 - 🗺️ Interactive Google Maps integration
 - 📝 Add locations with names, coordinates, and notes
 - 🎨 Sleek, minimalistic design with vibrant colors
-- 💾 Local storage for data persistence
+- 💾 SQLite-backed backend API for data persistence
 - 📱 Fully responsive design
 - ✨ Smooth animations and transitions
 
@@ -17,6 +17,7 @@ A sleek, modern travel tracking app built with React, TypeScript, and Google Map
 ### Prerequisites
 
 - Node.js (v18 or higher)
+- Go (v1.24 or higher)
 - A Google Maps API key
 
 ### Get a Google Maps API Key
@@ -46,89 +47,57 @@ cp .env.example .env
 VITE_GOOGLE_MAPS_API_KEY=your_actual_api_key_here
 ```
 
-4. Start the development server:
+### Run locally
+
+Use one command to run both services:
+
 ```bash
-npm run dev
+npm run dev:stack
 ```
 
-5. Open your browser and navigate to `http://localhost:5173`
+This starts:
+- Frontend Vite dev server: `http://localhost:5173`
+- Go backend/API server: `http://localhost:8572`
 
-## 🎯 Usage
+You can also run each side separately:
 
-### Creating a Trip
+```bash
+npm run dev:web   # frontend only
+npm run dev:api   # backend only
+```
 
-1. Click the "Create New Trip" card on the home page
-2. Enter trip name, start date, and end date
-3. Click "Create Trip"
+## 🧪 Production Build
 
-### Adding Locations
-
-1. Click on a trip card to view details
-2. Click "Add Location" button or click directly on the map
-3. Enter location name, coordinates (auto-filled if clicked on map), and optional notes
-4. Click "Add Location"
-
-### Managing Locations
-
-- **Edit**: Click the edit icon on any location card
-- **Delete**: Click the trash icon on any location card
-- **View on Map**: Click a location card to see it highlighted on the map
+```bash
+npm run build
+go run main.go
+```
 
 ## 🏗️ Tech Stack
 
-- **React 18** - UI framework
+- **React 19** - UI framework
 - **TypeScript** - Type safety
 - **Vite** - Build tool and dev server
+- **Go** - Backend server and API
+- **SQLite** - Persistent storage
 - **Tailwind CSS** - Styling
 - **React Router** - Navigation
 - **Google Maps (@vis.gl/react-google-maps)** - Map integration
 - **date-fns** - Date formatting
 - **lucide-react** - Icons
 
-## 📁 Project Structure
+## 🔌 Backend API
 
-```
-src/
-├── components/
-│   ├── ui/              # Reusable UI components
-│   │   ├── Button.tsx
-│   │   ├── Input.tsx
-│   │   ├── Modal.tsx
-│   │   └── Textarea.tsx
-│   └── LocationForm.tsx # Location form component
-├── pages/
-│   ├── TripList.tsx     # Home page with trip cards
-│   ├── TripForm.tsx     # Create/edit trip form
-│   └── TripDetail.tsx   # Trip details with map
-├── services/
-│   └── storage.ts       # LocalStorage abstraction
-├── lib/
-│   └── utils.ts         # Utility functions
-├── types.ts             # TypeScript type definitions
-└── App.tsx              # Main app with routing
-```
+Base path: `/api/trips`
 
-## 🎨 Design Features
+- `GET /api/trips` — list all trips
+- `POST /api/trips` — create a trip
+- `GET /api/trips/:id` — fetch one trip
+- `PATCH /api/trips/:id` — update trip fields
+- `DELETE /api/trips/:id` — remove a trip
 
-- **Glass-morphism effects** for modern UI
-- **Vibrant gradient colors** (blue, purple, pink, coral)
-- **Smooth animations** on all interactions
-- **Responsive layouts** for all screen sizes
-- **Custom map markers** with gradient styling
-
-## 🔄 Data Migration
-
-The app currently uses `localStorage` for data persistence, but the storage layer is abstracted in `src/services/storage.ts`, making it easy to migrate to a backend API in the future.
-
-To switch to an API:
-1. Update the methods in `StorageService`
-2. Replace `localStorage` calls with API requests
-3. No changes needed to components!
+Database file: `travelog.db`.
 
 ## 📝 License
 
 MIT
-
-## 🙏 Acknowledgments
-
-Built with modern web technologies and a focus on user experience.

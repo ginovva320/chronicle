@@ -1,29 +1,19 @@
 package main
 
 import (
-	"embed"
 	"flag"
-	"fmt"
 	"html/template"
-	"io/fs"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"anid.dev/chronicle/internal/storage"
 	"anid.dev/chronicle/internal/trip"
 	"github.com/olivere/vite"
 )
-
-//go:embed all:dist
-var dist embed.FS
-
-/*
-//go:embed all:public
-var public embed.FS
-*/
 
 func main() {
 	var (
@@ -45,18 +35,8 @@ func runDevServer() {
 
 	mux.Handle("/src/assets/", assets)
 
-	store, err := storage.NewStorage()
-	if err != nil {
-		log.Fatalf("Failed to initialize database storage: %v", err)
-	}
-	defer store.Close()
-
-	log.Println("Database initialized and connected.")
-
-	tripHandler := trip.NewHandler(store)
-
-	mux.Handle("/api/trips", tripHandler)
-	mux.Handle("/api/trips/", tripHandler)
+	closeStorage := registerAPI(mux)
+	defer closeStorage()
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/" || r.URL.Path == "/index.html" || strings.HasPrefix(r.URL.Path, "/trip") {
@@ -91,21 +71,18 @@ func runDevServer() {
 	})
 
 	server := &http.Server{
-		Addr:    "localhost:8572",
+		Addr:    serverAddr(),
 		Handler: mux,
 	}
 
-	log.Printf("Listening")
+	log.Printf("Development server listening on http://%s", server.Addr)
 	if err := server.ListenAndServe(); err != nil {
 		panic(err)
 	}
 }
 
 func runProdServer() {
-	distFS, err := fs.Sub(dist, "dist")
-	if err != nil {
-		panic(fmt.Errorf("creating sub-filesystem for 'dist' directory: %w", err))
-	}
+	distFS := os.DirFS("./dist")
 
 	mux := http.NewServeMux()
 
@@ -113,6 +90,9 @@ func runProdServer() {
 
 	// Handle requests for Vite-managed assets.
 	mux.Handle("/assets/", assets)
+
+	closeStorage := registerAPI(mux)
+	defer closeStorage()
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/" || r.URL.Path == "/index.html" {
@@ -146,13 +126,52 @@ func runProdServer() {
 	})
 
 	server := &http.Server{
-		Addr:    "localhost:8572",
+		Addr:    serverAddr(),
 		Handler: mux,
 	}
 
-	if err = server.ListenAndServe(); err != nil {
+	log.Printf("Production server listening on http://%s", server.Addr)
+	if err := server.ListenAndServe(); err != nil {
 		panic(err)
 	}
+}
+
+func registerAPI(mux *http.ServeMux) func() {
+	store, err := storage.NewStorage()
+	if err != nil {
+		log.Fatalf("Failed to initialize database storage: %v", err)
+	}
+
+	log.Println("Database initialized and connected")
+
+	tripHandler := trip.NewHandler(store)
+	mux.Handle("/api/trips", tripHandler)
+	mux.Handle("/api/trips/", tripHandler)
+
+	return func() {
+		if err := store.Close(); err != nil {
+			log.Printf("Failed to close database storage: %v", err)
+		}
+	}
+}
+
+func serverAddr() string {
+	host := os.Getenv("CHRONICLE_HOST")
+	if host == "" {
+		host = "localhost"
+	}
+
+	port := os.Getenv("CHRONICLE_PORT")
+	if port == "" {
+		port = "8572"
+	}
+
+	if _, err := strconv.Atoi(port); err != nil {
+		log.Printf("Invalid CHRONICLE_PORT %q, defaulting to 8572", port)
+		port = "8572"
+	}
+
+	return host + ":" + port
 }
 
 var indexTmpl = `<!doctype html>

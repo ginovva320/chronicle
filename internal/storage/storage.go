@@ -160,12 +160,19 @@ func (s *Storage) UpdateTrip(id int64, updates map[string]interface{}) error {
 	setClauses := []string{}
 	args := []interface{}{}
 
+	columnMap := map[string]string{
+		"name":      "name",
+		"startDate": "start_date",
+		"endDate":   "end_date",
+		"color":     "color",
+	}
+
 	for key, val := range updates {
 		log.Printf("Updating field %s to value %v", key, val)
 		// Only allow updating whitelisted fields
 		switch key {
 		case "name", "startDate", "endDate", "color":
-			setClauses = append(setClauses, fmt.Sprintf("%s = ?", key))
+			setClauses = append(setClauses, fmt.Sprintf("%s = ?", columnMap[key]))
 			args = append(args, val)
 		case "notes":
 			setClauses = append(setClauses, "notes = ?")
@@ -179,14 +186,12 @@ func (s *Storage) UpdateTrip(id int64, updates map[string]interface{}) error {
 			setClauses = append(setClauses, "locations_json = ?")
 			args = append(args, string(jsonBytes))
 		case "coordinates":
-			if coordsMap, ok := val.(Coordinate); ok {
-				jsonBytes, err := json.Marshal(coordsMap)
-				if err != nil {
-					return fmt.Errorf("failed to marshal coordinates for update: %w", err)
-				}
-				setClauses = append(setClauses, "coordinates_json = ?")
-				args = append(args, string(jsonBytes))
+			jsonBytes, err := json.Marshal(val)
+			if err != nil {
+				return fmt.Errorf("failed to marshal coordinates for update: %w", err)
 			}
+			setClauses = append(setClauses, "coordinates_json = ?")
+			args = append(args, string(jsonBytes))
 		}
 	}
 
