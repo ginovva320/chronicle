@@ -67,6 +67,7 @@ npm run dev:api   # backend only
 ```
 
 `dev:api` sets `CHRONICLE_SEED=true`, so seed data is inserted only when the database is empty.
+By default, seed data is loaded from `./seed/trips.seed.example.json` (public demo dataset). Override with `CHRONICLE_SEED_FILE` for local private datasets.
 
 ### Useful Developer Commands
 
@@ -120,6 +121,9 @@ Notes:
 - Override path with `CHRONICLE_DB_PATH`
 - Schema is versioned via `schema_migrations` table
 - `travelog.db` is intentionally gitignored and should not be committed
+- Default seed file path: `./seed/trips.seed.example.json`
+- Optional private seed override via `CHRONICLE_SEED_FILE` (for example `./seed/trips.seed.json`)
+- `seed/*.seed.json` is intentionally gitignored for privacy
 
 ## 🐳 Docker Self-Hosting
 
@@ -163,6 +167,12 @@ Package visibility:
 - GHCR supports private images.
 - If your GitHub repo is private, GHCR package is typically private by default.
 - You can explicitly set package visibility in GitHub: `Package -> Package settings -> Change visibility`.
+
+## 🌍 Open Source Prep
+
+- Open-source readiness checklist: `TODO_OPEN_SOURCE.md`
+- Contributor guide: `CONTRIBUTING.md`
+- Deployment and rollback guidance: `docs/deployment.md`
 
 ## 📝 License
 

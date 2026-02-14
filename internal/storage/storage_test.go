@@ -2,6 +2,8 @@ package storage
 
 import (
 	"database/sql"
+	"encoding/json"
+	"os"
 	"path/filepath"
 	"testing"
 )
@@ -11,6 +13,28 @@ func newTestStorage(t *testing.T, seed bool) *Storage {
 	t.Setenv("CHRONICLE_DB_PATH", filepath.Join(t.TempDir(), "test.db"))
 	if seed {
 		t.Setenv("CHRONICLE_SEED", "true")
+		seedFile := filepath.Join(t.TempDir(), "seed.json")
+		payload := []Trip{
+			{
+				Name:      "Seeded Trip",
+				StartDate: "2026-01-01",
+				EndDate:   "2026-01-02",
+				Locations: []Location{},
+				Color:     "",
+				Coordinates: &Coordinate{
+					Lat: 1.23,
+					Lng: -4.56,
+				},
+			},
+		}
+		raw, err := json.Marshal(payload)
+		if err != nil {
+			t.Fatalf("failed to encode seed payload: %v", err)
+		}
+		if err := os.WriteFile(seedFile, raw, 0644); err != nil {
+			t.Fatalf("failed to write seed payload: %v", err)
+		}
+		t.Setenv("CHRONICLE_SEED_FILE", seedFile)
 	} else {
 		t.Setenv("CHRONICLE_SEED", "")
 	}
@@ -45,8 +69,11 @@ func TestNewStorage_SeedsWhenEnabled(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetTrips() error = %v", err)
 	}
-	if len(trips) != len(initialTrips) {
-		t.Fatalf("expected %d seeded trips, got %d", len(initialTrips), len(trips))
+	if len(trips) != 1 {
+		t.Fatalf("expected 1 seeded trip, got %d", len(trips))
+	}
+	if trips[0].Name != "Seeded Trip" {
+		t.Fatalf("expected seeded trip name, got %q", trips[0].Name)
 	}
 }
 

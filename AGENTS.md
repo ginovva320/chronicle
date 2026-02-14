@@ -77,9 +77,10 @@ Trip IDs are numeric in SQLite and serialized as strings in API responses.
 
 ## Seeding Behavior
 
-- Seed data is defined in `internal/storage/seed.go`.
+- Seed loading is implemented in `internal/storage/seed.go`.
 - Seeding runs only when `CHRONICLE_SEED=true` and only if `trips` is empty.
-- Seed trip names are normalized without the `" Trip"` suffix.
+- Default seed file path is `./seed/trips.seed.example.json` (override with `CHRONICLE_SEED_FILE`).
+- Seed JSON files under `seed/*.seed.json` are gitignored.
 
 ## Migrations
 
