@@ -96,6 +96,10 @@ func (h *Handler) addTripHandler(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
+	if validationErrors := validateTripCreate(&newTrip); validationErrors != nil {
+		writeValidationError(w, http.StatusBadRequest, validationErrors)
+		return
+	}
 
 	insertedID, err := h.storage.AddTrip(newTrip)
 	if err != nil {
@@ -132,7 +136,10 @@ func (h *Handler) updateTripHandler(w http.ResponseWriter, r *http.Request, id i
 		writeError(w, http.StatusBadRequest, "Invalid update payload")
 		return
 	}
-	log.Printf("%+v", updates)
+	if validationErrors := validateTripUpdates(updates); validationErrors != nil {
+		writeValidationError(w, http.StatusBadRequest, validationErrors)
+		return
+	}
 
 	// Pass the map directly to the storage layer for processing
 	err := h.storage.UpdateTrip(id, updates)
@@ -190,6 +197,13 @@ func writeJSON(w http.ResponseWriter, status int, data interface{}) {
 // writeError writes an error message as JSON.
 func writeError(w http.ResponseWriter, status int, message string) {
 	writeJSON(w, status, map[string]string{"error": message})
+}
+
+func writeValidationError(w http.ResponseWriter, status int, details map[string]string) {
+	writeJSON(w, status, map[string]interface{}{
+		"error":   "validation_failed",
+		"details": details,
+	})
 }
 
 // decodeJSON decodes the JSON request body into the target interface.

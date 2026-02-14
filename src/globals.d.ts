@@ -1,1 +1,1 @@
-declare var google: any;
+declare const google: typeof globalThis.google;

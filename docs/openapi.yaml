@@ -1,0 +1,202 @@
+openapi: 3.0.3
+info:
+  title: Travelog API
+  version: 1.0.0
+  description: API for trip and location management.
+servers:
+  - url: http://localhost:8572
+paths:
+  /api/trips:
+    get:
+      summary: List trips
+      operationId: listTrips
+      responses:
+        '200':
+          description: Trip list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Trip'
+    post:
+      summary: Create trip
+      operationId: createTrip
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TripCreateRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Trip'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+  /api/trips/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Numeric SQLite trip ID serialized as string.
+    get:
+      summary: Get trip
+      operationId: getTrip
+      responses:
+        '200':
+          description: Trip
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Trip'
+        '404':
+          description: Not found
+    patch:
+      summary: Update trip fields
+      operationId: updateTrip
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TripPatchRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Trip'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '404':
+          description: Not found
+    delete:
+      summary: Delete trip
+      operationId: deleteTrip
+      responses:
+        '204':
+          description: Deleted
+        '404':
+          description: Not found
+components:
+  schemas:
+    Coordinate:
+      type: object
+      required: [lat, lng]
+      properties:
+        lat:
+          type: number
+        lng:
+          type: number
+    Location:
+      type: object
+      required: [id, name, coordinates]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        coordinates:
+          $ref: '#/components/schemas/Coordinate'
+        notes:
+          type: string
+        date:
+          type: string
+          format: date
+    Trip:
+      type: object
+      required: [id, name, startDate, endDate, locations, color]
+      properties:
+        id:
+          type: string
+          description: Numeric SQLite ID serialized as string.
+        name:
+          type: string
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        locations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Location'
+        color:
+          type: string
+        coordinates:
+          $ref: '#/components/schemas/Coordinate'
+        notes:
+          type: string
+    TripCreateRequest:
+      type: object
+      required: [name, startDate, endDate, locations, color]
+      properties:
+        name:
+          type: string
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        locations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Location'
+        color:
+          type: string
+        coordinates:
+          $ref: '#/components/schemas/Coordinate'
+        notes:
+          type: string
+    TripPatchRequest:
+      type: object
+      description: Partial update payload. Unsupported fields are rejected.
+      properties:
+        name:
+          type: string
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        locations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Location'
+        color:
+          type: string
+        coordinates:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/Coordinate'
+        notes:
+          type: string
+    ValidationError:
+      type: object
+      required: [error, details]
+      properties:
+        error:
+          type: string
+          enum: [validation_failed]
+        details:
+          type: object
+          additionalProperties:
+            type: string

@@ -12,32 +12,35 @@ import (
 	_ "github.com/mattn/go-sqlite3" // SQLite driver
 )
 
+const defaultDBPath = "./travelog.db"
+
 // Coordinate matches the {lat, lng} structure
+// used by the frontend.
 type Coordinate struct {
 	Lat float64 `json:"lat"`
 	Lng float64 `json:"lng"`
 }
 
-// Location matches the Location interface
+// Location matches the frontend location schema.
 type Location struct {
 	ID          string     `json:"id"`
 	Name        string     `json:"name"`
 	Coordinates Coordinate `json:"coordinates"`
 	Notes       string     `json:"notes,omitempty"`
-	Date        string     `json:"date,omitempty"` // Use string to match TS date format
+	Date        string     `json:"date,omitempty"`
 }
 
-// Trip defines the structure for our travel objects, matching the TS interface closely.
-// NOTE: Go uses int64 for the primary key internally, but the exported struct uses string.
+// Trip matches the frontend trip schema.
+// Internally, SQLite IDs are numeric and serialized back as strings.
 type Trip struct {
 	ID          string      `json:"id"`
 	Name        string      `json:"name"`
-	StartDate   string      `json:"startDate"` // Use string to match TS date format
-	EndDate     string      `json:"endDate"`   // Use string to match TS date format
+	StartDate   string      `json:"startDate"`
+	EndDate     string      `json:"endDate"`
 	Locations   []Location  `json:"locations"`
 	Color       string      `json:"color"`
-	Coordinates *Coordinate `json:"coordinates,omitempty"` // Pointer for optional
-	Notes       *string     `json:"notes,omitempty"`       // Pointer for optional
+	Coordinates *Coordinate `json:"coordinates,omitempty"`
+	Notes       *string     `json:"notes,omitempty"`
 }
 
 // Storage holds the database connection and methods for CRUD operations.
@@ -45,59 +48,56 @@ type Storage struct {
 	db *sql.DB
 }
 
-const dbPath = "./travelog.db"
-
-// NewStorage initializes the database and returns a new Storage instance.
+// NewStorage initializes the database, applies migrations, and optionally seeds data.
 func NewStorage() (*Storage, error) {
-	if err := initDB(); err != nil {
-		return nil, err
+	dbPath := databasePath()
+
+	dir := filepath.Dir(dbPath)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return nil, fmt.Errorf("could not create database directory: %w", err)
 	}
 
 	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
 		return nil, err
+	}
+
+	if err := runMigrations(db); err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+
+	if shouldSeed() {
+		if err := seedTripsIfEmpty(db); err != nil {
+			_ = db.Close()
+			return nil, err
+		}
 	}
 
 	return &Storage{db: db}, nil
 }
 
+func databasePath() string {
+	path := strings.TrimSpace(os.Getenv("CHRONICLE_DB_PATH"))
+	if path == "" {
+		return defaultDBPath
+	}
+	return path
+}
+
+func shouldSeed() bool {
+	seed := strings.ToLower(strings.TrimSpace(os.Getenv("CHRONICLE_SEED")))
+	switch seed {
+	case "1", "true", "yes", "on":
+		return true
+	default:
+		return false
+	}
+}
+
 // Close closes the database connection.
 func (s *Storage) Close() error {
 	return s.db.Close()
-}
-
-// initDB ensures the database file and table exist with the new schema.
-func initDB() error {
-	dir := filepath.Dir(dbPath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return fmt.Errorf("could not create directory: %w", err)
-	}
-
-	db, err := sql.Open("sqlite3", dbPath)
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-
-	// Updated schema to include new fields and JSON text columns for complex objects
-	sqlStmt := `
-	CREATE TABLE IF NOT EXISTS trips (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		name TEXT NOT NULL,
-		start_date TEXT,
-		end_date TEXT,
-		color TEXT,
-		notes TEXT,
-		coordinates_json TEXT,
-		locations_json TEXT
-	);`
-
-	_, err = db.Exec(sqlStmt)
-	if err != nil {
-		return err
-	}
-
-	return seedTripsIfEmpty(db)
 }
 
 // GetTrips retrieves all trips from the database.
@@ -127,7 +127,6 @@ func (s *Storage) GetTrip(id int64) (Trip, error) {
 
 // AddTrip inserts a new trip into the database.
 func (s *Storage) AddTrip(t Trip) (int64, error) {
-	// 1. Marshal complex structs to JSON strings
 	locationsJSON, err := json.Marshal(t.Locations)
 	if err != nil {
 		return 0, fmt.Errorf("failed to marshal locations: %w", err)
@@ -146,9 +145,8 @@ func (s *Storage) AddTrip(t Trip) (int64, error) {
 		notesVal = *t.Notes
 	}
 
-	// 2. Execute insert
 	res, err := s.db.Exec(`
-		INSERT INTO trips (name, start_date, end_date, color, notes, coordinates_json, locations_json) 
+		INSERT INTO trips (name, start_date, end_date, color, notes, coordinates_json, locations_json)
 		VALUES (?, ?, ?, ?, ?, ?, ?)`,
 		t.Name, t.StartDate, t.EndDate, t.Color, notesVal, coordinatesJSON, locationsJSON)
 	if err != nil {
@@ -158,8 +156,6 @@ func (s *Storage) AddTrip(t Trip) (int64, error) {
 }
 
 // UpdateTrip updates specific fields of an existing trip.
-// For simplicity, this only updates top-level string/numeric fields, not complex JSON objects.
-// A full implementation would handle JSON updates.
 func (s *Storage) UpdateTrip(id int64, updates map[string]interface{}) error {
 	setClauses := []string{}
 	args := []interface{}{}
@@ -173,7 +169,6 @@ func (s *Storage) UpdateTrip(id int64, updates map[string]interface{}) error {
 
 	for key, val := range updates {
 		log.Printf("Updating field %s to value %v", key, val)
-		// Only allow updating whitelisted fields
 		switch key {
 		case "name", "startDate", "endDate", "color":
 			setClauses = append(setClauses, fmt.Sprintf("%s = ?", columnMap[key]))
@@ -181,7 +176,6 @@ func (s *Storage) UpdateTrip(id int64, updates map[string]interface{}) error {
 		case "notes":
 			setClauses = append(setClauses, "notes = ?")
 			args = append(args, val)
-		// For complex objects, re-marshal them if present in updates
 		case "locations":
 			jsonBytes, err := json.Marshal(val)
 			if err != nil {
@@ -216,7 +210,7 @@ func (s *Storage) UpdateTrip(id int64, updates map[string]interface{}) error {
 		return err
 	}
 	if rowsAffected == 0 {
-		return sql.ErrNoRows // Indicate that no row was found to update
+		return sql.ErrNoRows
 	}
 	return nil
 }
@@ -238,8 +232,7 @@ func (s *Storage) DeleteTrip(id int64) error {
 	return nil
 }
 
-// scanTrip is a helper function to read a row/single result into a Trip struct,
-// including unmarshaling the JSON fields.
+// scanTrip reads a row into Trip and unmarshals JSON columns.
 func (s *Storage) scanTrip(scanner interface {
 	Scan(dest ...interface{}) error
 }) (Trip, error) {
@@ -255,19 +248,16 @@ func (s *Storage) scanTrip(scanner interface {
 		return Trip{}, err
 	}
 
-	// Convert DB ID to string for the frontend struct
 	t.ID = fmt.Sprintf("%d", dbID)
 
-	// Unmarshal Locations
 	if locationsJSON != "" {
 		if err := json.Unmarshal([]byte(locationsJSON), &t.Locations); err != nil {
 			return Trip{}, fmt.Errorf("failed to unmarshal locations: %w", err)
 		}
 	} else {
-		t.Locations = []Location{} // Ensure it's not nil if empty
+		t.Locations = []Location{}
 	}
 
-	// Unmarshal Coordinates (optional)
 	if coordinatesJSON != "" {
 		var coords Coordinate
 		if err := json.Unmarshal([]byte(coordinatesJSON), &coords); err != nil {
@@ -276,7 +266,6 @@ func (s *Storage) scanTrip(scanner interface {
 		t.Coordinates = &coords
 	}
 
-	// Handle optional Notes field
 	if notes.Valid {
 		t.Notes = &notes.String
 	}

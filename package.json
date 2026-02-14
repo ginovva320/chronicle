@@ -8,10 +8,14 @@
     "server": "go run main.go -dev",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "test:api": "GOCACHE=/tmp/go-build go test ./...",
+    "check": "npm run lint && npm run test:api",
     "preview": "vite preview",
     "dev:web": "vite",
-    "dev:api": "go run main.go -dev",
-    "dev:stack": "./scripts/dev-stack.sh"
+    "dev:api": "CHRONICLE_SEED=true go run main.go -dev",
+    "dev:stack": "./scripts/dev-stack.sh",
+    "db:reset": "./scripts/reset-db.sh",
+    "hooks:install": "./scripts/install-git-hooks.sh"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",

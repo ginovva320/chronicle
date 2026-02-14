@@ -29,6 +29,9 @@ go run main.go
 
 # Go compile/test check
 GOCACHE=/tmp/go-build go test ./...
+
+# Full checks
+npm run check
 ```
 
 ## Environment
@@ -75,8 +78,18 @@ Trip IDs are numeric in SQLite and serialized as strings in API responses.
 ## Seeding Behavior
 
 - Seed data is defined in `internal/storage/seed.go`.
-- Seeding runs during DB init only when `trips` table is empty.
+- Seeding runs only when `CHRONICLE_SEED=true` and only if `trips` is empty.
 - Seed trip names are normalized without the `" Trip"` suffix.
+
+## Migrations
+
+- Schema migrations run automatically on startup via `internal/storage/migrations.go`.
+- Applied versions are tracked in `schema_migrations`.
+
+## API Contract
+
+- Source of truth OpenAPI spec: `docs/openapi.yaml`.
+- Validation errors should use `error=validation_failed` with field-level `details`.
 
 ## Implementation Conventions
 

@@ -66,12 +66,25 @@ npm run dev:web   # frontend only
 npm run dev:api   # backend only
 ```
 
+`dev:api` sets `CHRONICLE_SEED=true`, so seed data is inserted only when the database is empty.
+
+### Useful Developer Commands
+
+```bash
+npm run test:api      # run Go tests
+npm run check         # lint + Go tests
+npm run db:reset      # delete local SQLite db (keeps code/state clean)
+npm run hooks:install # install local pre-commit hook (lint + go test)
+```
+
 ## 🧪 Production Build
 
 ```bash
 npm run build
 go run main.go
 ```
+
+For production-like runs, seed data is off by default unless `CHRONICLE_SEED=true` is explicitly set.
 
 ## 🏗️ Tech Stack
 
@@ -96,7 +109,17 @@ Base path: `/api/trips`
 - `PATCH /api/trips/:id` — update trip fields
 - `DELETE /api/trips/:id` — remove a trip
 
-Database file: `travelog.db`.
+Notes:
+- `:id` is a numeric SQLite primary key serialized as a string in API responses.
+- Request validation returns `{"error":"validation_failed","details":{...}}` for invalid payloads.
+- OpenAPI contract: `docs/openapi.yaml`
+
+## 💾 Database
+
+- Default DB path: `./travelog.db`
+- Override path with `CHRONICLE_DB_PATH`
+- Schema is versioned via `schema_migrations` table
+- `travelog.db` is intentionally gitignored and should not be committed
 
 ## 📝 License
 

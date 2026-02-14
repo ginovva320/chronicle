@@ -10,6 +10,9 @@ import { Button } from '@/components/ui/button';
 function TripListContent() {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [selectedMarker, setSelectedMarker] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [deletingTripId, setDeletingTripId] = useState<string | null>(null);
   const navigate = useNavigate();
   const map = useMap();
 
@@ -18,19 +21,34 @@ function TripListContent() {
   }, []);
 
   const loadTrips = async () => {
-    const loadedTrips = await StorageService.getTrips();
-    // Sort by start date descending (most recent first)
-    const sortedTrips = loadedTrips.sort((a, b) =>
-      new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
-    );
-    setTrips(sortedTrips);
+    try {
+      setLoading(true);
+      setError(null);
+      const loadedTrips = await StorageService.getTrips();
+      const sortedTrips = loadedTrips.sort((a, b) =>
+        new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
+      );
+      setTrips(sortedTrips);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load trips.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDeleteTrip = (id: string, e: React.MouseEvent) => {
+  const handleDeleteTrip = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (window.confirm('Are you sure you want to delete this trip?')) {
-      StorageService.deleteTrip(id);
-      loadTrips();
+      try {
+        setDeletingTripId(id);
+        setError(null);
+        await StorageService.deleteTrip(id);
+        await loadTrips();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to delete trip.');
+      } finally {
+        setDeletingTripId(null);
+      }
     }
   };
 
@@ -69,6 +87,11 @@ function TripListContent() {
             My Travel Adventures
           </h1>
           <p className="text-muted-foreground text-lg">Track your journeys around the world</p>
+          {error && (
+            <div className="mt-3 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {error}
+            </div>
+          )}
         </div>
       </div>
 
@@ -149,7 +172,11 @@ function TripListContent() {
 
           {/* Scrollable Content */}
           <div className="flex-1 overflow-y-auto p-6">
-            {trips.length === 0 ? (
+            {loading ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <p className="text-sm">Loading trips...</p>
+              </div>
+            ) : trips.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 <MapPin size={48} className="mx-auto mb-3 opacity-50" />
                 <p className="text-sm">No trips yet. Click "Create Trip" above to get started.</p>
@@ -191,6 +218,7 @@ function TripListContent() {
                           size="icon"
                           variant="ghost"
                           className="h-8 w-8 hover:bg-destructive hover:text-destructive-foreground"
+                          disabled={deletingTripId === trip.id}
                           onClick={(e) => handleDeleteTrip(trip.id, e)}
                         >
                           <Trash2 size={14} />

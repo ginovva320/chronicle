@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { nanoid } from 'nanoid';
 import { ArrowLeft, Search } from 'lucide-react';
 import { APIProvider, useMapsLibrary } from '@vis.gl/react-google-maps';
 import type { Trip } from '../types';
@@ -10,6 +9,20 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Field, FieldLabel, FieldError, FieldGroup } from '@/components/ui/field';
+
+type PlacesAutocomplete = {
+  getPlace: () => {
+    name?: string;
+    formatted_address?: string;
+    geometry?: {
+      location?: {
+        lat: () => number;
+        lng: () => number;
+      };
+    };
+  };
+  addListener: (eventName: string, handler: () => void) => void;
+};
 
 function TripFormContent() {
   const { id } = useParams<{ id: string }>();
@@ -27,30 +40,44 @@ function TripFormContent() {
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(Boolean(isEditing));
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const autocompleteInputRef = useRef<HTMLInputElement>(null);
-  const autocompleteRef = useRef<any>(null);
+  const autocompleteRef = useRef<PlacesAutocomplete | null>(null);
 
   // Load the Google Maps Places library
   const places = useMapsLibrary('places');
 
   const getTrip = async (id: string) => {
-    const trip = await StorageService.getTrip(id);
-    if (trip) {
-      setFormData({
-        name: trip.name,
-        startDate: trip.startDate,
-        endDate: trip.endDate,
-        lat: trip.coordinates?.lat.toString() || '',
-        lng: trip.coordinates?.lng.toString() || '',
-        locationName: '',
-        notes: trip.notes || ''
-      });
+    try {
+      setLoading(true);
+      const trip = await StorageService.getTrip(id);
+      if (trip) {
+        setFormData({
+          name: trip.name,
+          startDate: trip.startDate,
+          endDate: trip.endDate,
+          lat: trip.coordinates?.lat.toString() || '',
+          lng: trip.coordinates?.lng.toString() || '',
+          locationName: '',
+          notes: trip.notes || ''
+        });
+      } else {
+        setSubmitError('Trip not found.');
+      }
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : 'Failed to load trip.');
+    } finally {
+      setLoading(false);
     }
   }
 
   useEffect(() => {
-    if (isEditing) {
+    if (isEditing && id) {
       getTrip(id);
+    } else {
+      setLoading(false);
     }
   }, [id, isEditing]);
 
@@ -64,19 +91,20 @@ function TripFormContent() {
         {
           fields: ['name', 'geometry', 'formatted_address'],
         }
-      );
+      ) as PlacesAutocomplete;
 
       autocompleteRef.current.addListener('place_changed', () => {
         const place = autocompleteRef.current?.getPlace();
+        const location = place?.geometry?.location;
 
-        if (place?.geometry?.location) {
+        if (location) {
           const placeName = place.name || place.formatted_address || '';
           setFormData(prev => ({
             ...prev,
             name: placeName,
             locationName: placeName,
-            lat: place.geometry.location.lat().toString(),
-            lng: place.geometry.location.lng().toString(),
+            lat: location.lat().toString(),
+            lng: location.lng().toString(),
           }));
 
           if (autocompleteInputRef.current) {
@@ -112,12 +140,14 @@ function TripFormContent() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!validate()) return;
+    setSubmitError(null);
+    setIsSubmitting(true);
 
-    const tripData: any = {
+    const tripData: Omit<Trip, 'id' | 'locations' | 'color'> & Partial<Pick<Trip, 'coordinates'>> = {
       name: formData.name,
       startDate: formData.startDate,
       endDate: formData.endDate,
@@ -132,20 +162,32 @@ function TripFormContent() {
       };
     }
 
-    if (isEditing) {
-      StorageService.updateTrip(id, tripData);
-    } else {
-      const newTrip: Trip = {
-        id: nanoid(),
-        ...tripData,
-        locations: [],
-        color: getRandomColor()
-      };
-      StorageService.addTrip(newTrip);
+    try {
+      if (isEditing && id) {
+        await StorageService.updateTrip(id, tripData);
+      } else {
+        const newTrip: Omit<Trip, 'id'> = {
+          ...tripData,
+          locations: [],
+          color: getRandomColor()
+        };
+        await StorageService.addTrip(newTrip);
+      }
+      navigate('/');
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : 'Failed to save trip.');
+    } finally {
+      setIsSubmitting(false);
     }
-
-    navigate('/');
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-muted-foreground">Loading trip...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen p-6">
@@ -165,6 +207,11 @@ function TripFormContent() {
           <h1 className="text-3xl font-bold mb-6">
             {isEditing ? 'Edit Trip' : 'Create New Trip'}
           </h1>
+          {submitError && (
+            <div className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {submitError}
+            </div>
+          )}
 
           <form onSubmit={handleSubmit}>
             <FieldGroup>
@@ -268,13 +315,14 @@ function TripFormContent() {
             </FieldGroup>
 
             <div className="flex gap-3 pt-4">
-              <Button type="submit" className="flex-1">
-                {isEditing ? 'Update Trip' : 'Create Trip'}
+              <Button type="submit" className="flex-1" disabled={isSubmitting}>
+                {isSubmitting ? 'Saving...' : isEditing ? 'Update Trip' : 'Create Trip'}
               </Button>
               <Button
                 type="button"
                 variant="secondary"
                 onClick={() => navigate('/')}
+                disabled={isSubmitting}
               >
                 Cancel
               </Button>
