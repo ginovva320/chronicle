@@ -9,3 +9,5 @@ travelog.db
 .DS_Store
 .vscode
 .idea
+seed/*.seed.json
+!seed/trips.seed.example.json
