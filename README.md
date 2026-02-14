@@ -8,7 +8,7 @@ A sleek, modern travel tracking app built with React, TypeScript, and Google Map
 - 🗺️ Interactive Google Maps integration
 - 📝 Add locations with names, coordinates, and notes
 - 🎨 Sleek, minimalistic design with vibrant colors
-- 💾 Local storage for data persistence
+- 💾 SQLite-backed backend API for data persistence
 - 📱 Fully responsive design
 - ✨ Smooth animations and transitions
 
@@ -17,6 +17,7 @@ A sleek, modern travel tracking app built with React, TypeScript, and Google Map
 ### Prerequisites
 
 - Node.js (v18 or higher)
+- Go (v1.24 or higher)
 - A Google Maps API key
 
 ### Get a Google Maps API Key
@@ -46,89 +47,123 @@ cp .env.example .env
 VITE_GOOGLE_MAPS_API_KEY=your_actual_api_key_here
 ```
 
-4. Start the development server:
+### Run locally
+
+Use one command to run both services:
+
 ```bash
-npm run dev
+npm run dev:stack
 ```
 
-5. Open your browser and navigate to `http://localhost:5173`
+This starts:
+- Frontend Vite dev server: `http://localhost:5173`
+- Go backend/API server: `http://localhost:8572`
 
-## 🎯 Usage
+You can also run each side separately:
 
-### Creating a Trip
+```bash
+npm run dev:web   # frontend only
+npm run dev:api   # backend only
+```
 
-1. Click the "Create New Trip" card on the home page
-2. Enter trip name, start date, and end date
-3. Click "Create Trip"
+`dev:api` sets `CHRONICLE_SEED=true`, so seed data is inserted only when the database is empty.
 
-### Adding Locations
+### Useful Developer Commands
 
-1. Click on a trip card to view details
-2. Click "Add Location" button or click directly on the map
-3. Enter location name, coordinates (auto-filled if clicked on map), and optional notes
-4. Click "Add Location"
+```bash
+npm run test:api      # run Go tests
+npm run check         # lint + Go tests
+npm run db:reset      # delete local SQLite db (keeps code/state clean)
+npm run hooks:install # install local pre-commit hook (lint + go test)
+```
 
-### Managing Locations
+## 🧪 Production Build
 
-- **Edit**: Click the edit icon on any location card
-- **Delete**: Click the trash icon on any location card
-- **View on Map**: Click a location card to see it highlighted on the map
+```bash
+npm run build
+go run main.go
+```
+
+For production-like runs, seed data is off by default unless `CHRONICLE_SEED=true` is explicitly set.
 
 ## 🏗️ Tech Stack
 
-- **React 18** - UI framework
+- **React 19** - UI framework
 - **TypeScript** - Type safety
 - **Vite** - Build tool and dev server
+- **Go** - Backend server and API
+- **SQLite** - Persistent storage
 - **Tailwind CSS** - Styling
 - **React Router** - Navigation
 - **Google Maps (@vis.gl/react-google-maps)** - Map integration
 - **date-fns** - Date formatting
 - **lucide-react** - Icons
 
-## 📁 Project Structure
+## 🔌 Backend API
 
+Base path: `/api/trips`
+
+- `GET /api/trips` — list all trips
+- `POST /api/trips` — create a trip
+- `GET /api/trips/:id` — fetch one trip
+- `PATCH /api/trips/:id` — update trip fields
+- `DELETE /api/trips/:id` — remove a trip
+
+Notes:
+- `:id` is a numeric SQLite primary key serialized as a string in API responses.
+- Request validation returns `{"error":"validation_failed","details":{...}}` for invalid payloads.
+- OpenAPI contract: `docs/openapi.yaml`
+
+## 💾 Database
+
+- Default DB path: `./travelog.db`
+- Override path with `CHRONICLE_DB_PATH`
+- Schema is versioned via `schema_migrations` table
+- `travelog.db` is intentionally gitignored and should not be committed
+
+## 🐳 Docker Self-Hosting
+
+Build image locally:
+
+```bash
+docker build \
+  --build-arg VITE_GOOGLE_MAPS_API_KEY=your_actual_api_key_here \
+  -t travelog:latest .
 ```
-src/
-├── components/
-│   ├── ui/              # Reusable UI components
-│   │   ├── Button.tsx
-│   │   ├── Input.tsx
-│   │   ├── Modal.tsx
-│   │   └── Textarea.tsx
-│   └── LocationForm.tsx # Location form component
-├── pages/
-│   ├── TripList.tsx     # Home page with trip cards
-│   ├── TripForm.tsx     # Create/edit trip form
-│   └── TripDetail.tsx   # Trip details with map
-├── services/
-│   └── storage.ts       # LocalStorage abstraction
-├── lib/
-│   └── utils.ts         # Utility functions
-├── types.ts             # TypeScript type definitions
-└── App.tsx              # Main app with routing
+
+Run with persistent SQLite storage:
+
+```bash
+mkdir -p ./data
+docker run -d \
+  --name travelog \
+  -p 8572:8572 \
+  -v "$(pwd)/data:/data" \
+  -e CHRONICLE_DB_PATH=/data/travelog.db \
+  -e CHRONICLE_SEED=false \
+  travelog:latest
 ```
 
-## 🎨 Design Features
+The app is served at `http://localhost:8572`.
 
-- **Glass-morphism effects** for modern UI
-- **Vibrant gradient colors** (blue, purple, pink, coral)
-- **Smooth animations** on all interactions
-- **Responsive layouts** for all screen sizes
-- **Custom map markers** with gradient styling
+## 📦 GHCR CI/CD
 
-## 🔄 Data Migration
+Workflow file: `.github/workflows/ghcr.yml`
 
-The app currently uses `localStorage` for data persistence, but the storage layer is abstracted in `src/services/storage.ts`, making it easy to migrate to a backend API in the future.
+What it does:
+- On PR: run lint, Go tests, and frontend build
+- On push to `main`/`master` (or version tags): build and push Docker image to GHCR
+- Image name: `ghcr.io/<owner>/<repo>`
+- Tags: `latest` (default branch), `sha-<commit>`, and release tags
 
-To switch to an API:
-1. Update the methods in `StorageService`
-2. Replace `localStorage` calls with API requests
-3. No changes needed to components!
+Required repository secrets:
+- `VITE_GOOGLE_MAPS_API_KEY` (used at Docker build time for frontend bundle)
+
+Package visibility:
+- GHCR supports private images.
+- If your GitHub repo is private, GHCR package is typically private by default.
+- You can explicitly set package visibility in GitHub: `Package -> Package settings -> Change visibility`.
 
 ## 📝 License
 
 MIT
-
-## 🙏 Acknowledgments
-
-Built with modern web technologies and a focus on user experience.

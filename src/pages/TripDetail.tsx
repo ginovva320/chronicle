@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Calendar, Trash2, Edit2, MapPin, PlusIcon } from 'lucide-react';
 import { APIProvider, Map, AdvancedMarker, InfoWindow, useMap } from '@vis.gl/react-google-maps';
@@ -7,14 +7,22 @@ import type { Trip, Location } from '../types';
 import { StorageService } from '../services/storage';
 import { Button } from '@/components/ui/button';
 
-function TripDetailContent({ trip, onLocationUpdate }: { trip: Trip; onLocationUpdate: () => void }) {
+function TripDetailContent({
+  trip,
+  onLocationUpdate,
+  setError
+}: {
+  trip: Trip;
+  onLocationUpdate: () => Promise<void>;
+  setError: (value: string | null) => void;
+}) {
   const navigate = useNavigate();
   const [selectedMarker, setSelectedMarker] = useState<string | null>(null);
   const map = useMap();
 
   // Fit map to show all locations
   useEffect(() => {
-    if (map && trip.locations.length > 0) {
+    if (map && trip.locations.length > 1) {
       const bounds = new google.maps.LatLngBounds();
       trip.locations.forEach(location => {
         bounds.extend(location.coordinates);
@@ -40,16 +48,21 @@ function TripDetailContent({ trip, onLocationUpdate }: { trip: Trip; onLocationU
   const centerOnLocation = (location: Location) => {
     if (map) {
       map.panTo(location.coordinates);
-      map.setZoom(10);
+      map.setZoom(15);
     }
     setSelectedMarker(location.id);
   };
 
-  const handleDeleteLocation = (locationId: string) => {
+  const handleDeleteLocation = async (locationId: string) => {
     if (!window.confirm('Delete this location?')) return;
     const updatedLocations = trip.locations.filter(loc => loc.id !== locationId);
-    StorageService.updateTrip(trip.id, { locations: updatedLocations });
-    onLocationUpdate();
+    try {
+      setError(null);
+      await StorageService.updateTrip(trip.id, { locations: updatedLocations });
+      await onLocationUpdate();
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to delete location.');
+    }
   };
 
   const handleEditLocation = (location: Location) => {
@@ -66,7 +79,7 @@ function TripDetailContent({ trip, onLocationUpdate }: { trip: Trip; onLocationU
         lat: trip.locations.reduce((sum, loc) => sum + loc.coordinates.lat, 0) / trip.locations.length,
         lng: trip.locations.reduce((sum, loc) => sum + loc.coordinates.lng, 0) / trip.locations.length
       }
-    : { lat: 20, lng: 0 };
+    : { lat: trip.coordinates?.lat, lng: trip.coordinates?.lng };
 
   return (
     <div className="h-screen flex flex-col">
@@ -87,7 +100,7 @@ function TripDetailContent({ trip, onLocationUpdate }: { trip: Trip; onLocationU
         <div className="flex-1 relative">
           <Map
             defaultCenter={mapCenter}
-            defaultZoom={trip.locations.length > 0 ? 8 : 2}
+            defaultZoom={15}
             mapId="travelog-map"
             className="w-full h-full"
             colorScheme="LIGHT"
@@ -235,32 +248,61 @@ function TripDetailContent({ trip, onLocationUpdate }: { trip: Trip; onLocationU
 export default function TripDetail() {
   const { id } = useParams<{ id: string }>();
   const [trip, setTrip] = useState<Trip | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const loadTrip = () => {
-    if (!id) return;
-    const loadedTrip = StorageService.getTrip(id);
-    if (loadedTrip) {
-      setTrip(loadedTrip);
+  const loadTrip = useCallback(async () => {
+    if (!id) {
+      setLoading(false);
+      return;
     }
-  };
+    try {
+      setLoading(true);
+      const loadedTrip = await StorageService.getTrip(id);
+      if (loadedTrip) {
+        setTrip(loadedTrip);
+        setError(null);
+      } else {
+        setError('Trip not found.');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load trip.');
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
 
   useEffect(() => {
     if (id) {
       loadTrip();
     }
-  }, [id]);
+  }, [id, loadTrip]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-muted-foreground">Loading trip...</p>
+      </div>
+    );
+  }
 
   if (!trip) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-muted-foreground">Loading...</p>
+      <div className="min-h-screen flex flex-col items-center justify-center gap-3">
+        <p className="text-muted-foreground">{error || 'Trip not found.'}</p>
+        <Button onClick={() => loadTrip()} variant="secondary">Retry</Button>
       </div>
     );
   }
 
   return (
     <APIProvider apiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''}>
-      <TripDetailContent trip={trip} onLocationUpdate={loadTrip} />
+      {error && (
+        <div className="fixed left-4 top-4 z-50 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          {error}
+        </div>
+      )}
+      <TripDetailContent trip={trip} onLocationUpdate={loadTrip} setError={setError} />
     </APIProvider>
   );
 }

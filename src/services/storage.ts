@@ -1,49 +1,100 @@
 import type { Trip } from '../types';
 
-const STORAGE_KEY = 'travelog_trips';
+const API_BASE_URL = '/api/trips';
+
+type APIErrorResponse = {
+  error?: string;
+  message?: string;
+  details?: Record<string, string>;
+};
+
+async function toRequestError(response: Response): Promise<Error> {
+  let message = `Request failed (${response.status})`;
+
+  try {
+    const payload = (await response.json()) as APIErrorResponse;
+
+    if (payload.error === 'validation_failed' && payload.details) {
+      const detailText = Object.entries(payload.details)
+        .map(([field, msg]) => `${field}: ${msg}`)
+        .join(', ');
+      message = `Validation failed: ${detailText}`;
+    } else if (payload.message) {
+      message = payload.message;
+    } else if (payload.error) {
+      message = payload.error;
+    }
+  } catch {
+    // Ignore JSON parsing errors and fall back to default message.
+  }
+
+  return new Error(message);
+}
 
 export class StorageService {
-  static getTrips(): Trip[] {
-    try {
-      const data = localStorage.getItem(STORAGE_KEY);
-      return data ? JSON.parse(data) : [];
-    } catch (error) {
-      console.error('Error loading trips:', error);
-      return [];
+  static async getTrips(): Promise<Trip[]> {
+    const response = await fetch(API_BASE_URL);
+
+    if (!response.ok) {
+      throw await toRequestError(response);
     }
+
+    return (await response.json()) as Trip[];
   }
 
-  static saveTrips(trips: Trip[]): void {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(trips));
-    } catch (error) {
-      console.error('Error saving trips:', error);
+  static async getTrip(id: string): Promise<Trip | undefined> {
+    const response = await fetch(`${API_BASE_URL}/${id}`);
+
+    if (response.status === 404) {
+      return undefined;
     }
-  }
 
-  static getTrip(id: string): Trip | undefined {
-    const trips = this.getTrips();
-    return trips.find(trip => trip.id === id);
-  }
-
-  static addTrip(trip: Trip): void {
-    const trips = this.getTrips();
-    trips.push(trip);
-    this.saveTrips(trips);
-  }
-
-  static updateTrip(id: string, updates: Partial<Trip>): void {
-    const trips = this.getTrips();
-    const index = trips.findIndex(trip => trip.id === id);
-    if (index !== -1) {
-      trips[index] = { ...trips[index], ...updates };
-      this.saveTrips(trips);
+    if (!response.ok) {
+      throw await toRequestError(response);
     }
+
+    return (await response.json()) as Trip;
   }
 
-  static deleteTrip(id: string): void {
-    const trips = this.getTrips();
-    const filtered = trips.filter(trip => trip.id !== id);
-    this.saveTrips(filtered);
+  static async addTrip(trip: Omit<Trip, 'id'>): Promise<Trip> {
+    const response = await fetch(API_BASE_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(trip),
+    });
+
+    if (!response.ok) {
+      throw await toRequestError(response);
+    }
+
+    return (await response.json()) as Trip;
+  }
+
+  static async updateTrip(id: string, updates: Partial<Trip>): Promise<Trip> {
+    const response = await fetch(`${API_BASE_URL}/${id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(updates),
+    });
+
+    if (!response.ok) {
+      throw await toRequestError(response);
+    }
+
+    return (await response.json()) as Trip;
+  }
+
+  static async deleteTrip(id: string): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/${id}`, {
+      method: 'DELETE',
+    });
+
+    if (!response.ok) {
+      throw await toRequestError(response);
+    }
   }
 }

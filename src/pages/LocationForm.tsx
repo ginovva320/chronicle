@@ -10,6 +10,20 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Field, FieldLabel, FieldError, FieldGroup } from '@/components/ui/field';
 
+type PlacesAutocomplete = {
+  getPlace: () => {
+    name?: string;
+    formatted_address?: string;
+    geometry?: {
+      location?: {
+        lat: () => number;
+        lng: () => number;
+      };
+    };
+  };
+  addListener: (eventName: string, handler: () => void) => void;
+};
+
 function LocationFormContent() {
   const { tripId, locationId } = useParams<{ tripId: string; locationId?: string }>();
   const navigate = useNavigate();
@@ -24,27 +38,46 @@ function LocationFormContent() {
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(Boolean(isEditing));
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const autocompleteInputRef = useRef<HTMLInputElement>(null);
-  const autocompleteRef = useRef<any>(null);
+  const autocompleteRef = useRef<PlacesAutocomplete | null>(null);
 
   // Load the Google Maps Places library
   const places = useMapsLibrary('places');
 
   useEffect(() => {
     if (isEditing && tripId && locationId) {
-      const trip = StorageService.getTrip(tripId);
-      if (trip) {
-        const location = trip.locations.find(loc => loc.id === locationId);
-        if (location) {
-          setFormData({
-            name: location.name,
-            lat: location.coordinates.lat.toString(),
-            lng: location.coordinates.lng.toString(),
-            notes: location.notes || '',
-            date: location.date || ''
-          });
+      const loadTrip = async () => {
+        try {
+          setLoading(true);
+          const trip = await StorageService.getTrip(tripId);
+          if (trip) {
+            const location = trip.locations.find(loc => loc.id === locationId);
+            if (location) {
+              setFormData({
+                name: location.name,
+                lat: location.coordinates.lat.toString(),
+                lng: location.coordinates.lng.toString(),
+                notes: location.notes || '',
+                date: location.date || ''
+              });
+            } else {
+              setSubmitError('Location not found.');
+            }
+          } else {
+            setSubmitError('Trip not found.');
+          }
+        } catch (error) {
+          setSubmitError(error instanceof Error ? error.message : 'Failed to load location.');
+        } finally {
+          setLoading(false);
         }
       }
+      loadTrip();
+    } else {
+      setLoading(false);
     }
   }, [tripId, locationId, isEditing]);
 
@@ -58,17 +91,18 @@ function LocationFormContent() {
         {
           fields: ['name', 'geometry', 'formatted_address'],
         }
-      );
+      ) as PlacesAutocomplete;
 
       autocompleteRef.current.addListener('place_changed', () => {
         const place = autocompleteRef.current?.getPlace();
+        const location = place?.geometry?.location;
 
-        if (place?.geometry?.location) {
+        if (location) {
           setFormData(prev => ({
             ...prev,
             name: place.name || place.formatted_address || '',
-            lat: place.geometry.location.lat().toString(),
-            lng: place.geometry.location.lng().toString(),
+            lat: location.lat().toString(),
+            lng: location.lng().toString(),
           }));
 
           if (autocompleteInputRef.current) {
@@ -102,13 +136,26 @@ function LocationFormContent() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!validate() || !tripId) return;
+    setSubmitError(null);
+    setIsSubmitting(true);
 
-    const trip = StorageService.getTrip(tripId);
-    if (!trip) return;
+    let trip;
+    try {
+      trip = await StorageService.getTrip(tripId);
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : 'Failed to load trip.');
+      setIsSubmitting(false);
+      return;
+    }
+    if (!trip) {
+      setSubmitError('Trip not found.');
+      setIsSubmitting(false);
+      return;
+    }
 
     const newLocation: Location = {
       id: locationId || nanoid(),
@@ -132,9 +179,23 @@ function LocationFormContent() {
       updatedLocations = [...trip.locations, newLocation];
     }
 
-    StorageService.updateTrip(tripId, { locations: updatedLocations });
-    navigate(`/trip/${tripId}`);
+    try {
+      await StorageService.updateTrip(tripId, { locations: updatedLocations });
+      navigate(`/trip/${tripId}`);
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : 'Failed to save location.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-muted-foreground">Loading location...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen p-6">
@@ -154,6 +215,11 @@ function LocationFormContent() {
           <h1 className="text-3xl font-bold mb-6">
             {isEditing ? 'Edit Location' : 'Add Location'}
           </h1>
+          {submitError && (
+            <div className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {submitError}
+            </div>
+          )}
 
           <form onSubmit={handleSubmit}>
             <FieldGroup>
@@ -250,13 +316,14 @@ function LocationFormContent() {
             </FieldGroup>
 
             <div className="flex gap-3 pt-4">
-              <Button type="submit" className="flex-1">
-                {isEditing ? 'Update Location' : 'Add Location'}
+              <Button type="submit" className="flex-1" disabled={isSubmitting}>
+                {isSubmitting ? 'Saving...' : isEditing ? 'Update Location' : 'Add Location'}
               </Button>
               <Button
                 type="button"
                 variant="secondary"
                 onClick={() => navigate(`/trip/${tripId}`)}
+                disabled={isSubmitting}
               >
                 Cancel
               </Button>

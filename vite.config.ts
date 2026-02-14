@@ -13,5 +13,20 @@ export default defineConfig({
   server: {
     host: true,
     allowedHosts: true,
-  }
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8572',
+        changeOrigin: true,
+      },
+    },
+  },
+  build: {
+    // generates .vite/manifest.json in outDir
+    manifest: true,
+
+    rollupOptions: {
+      // overwrite default .html entry
+      input: "/src/main.tsx",
+    },
+  },
 })
