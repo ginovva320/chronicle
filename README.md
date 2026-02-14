@@ -121,6 +121,49 @@ Notes:
 - Schema is versioned via `schema_migrations` table
 - `travelog.db` is intentionally gitignored and should not be committed
 
+## 🐳 Docker Self-Hosting
+
+Build image locally:
+
+```bash
+docker build \
+  --build-arg VITE_GOOGLE_MAPS_API_KEY=your_actual_api_key_here \
+  -t travelog:latest .
+```
+
+Run with persistent SQLite storage:
+
+```bash
+mkdir -p ./data
+docker run -d \
+  --name travelog \
+  -p 8572:8572 \
+  -v "$(pwd)/data:/data" \
+  -e CHRONICLE_DB_PATH=/data/travelog.db \
+  -e CHRONICLE_SEED=false \
+  travelog:latest
+```
+
+The app is served at `http://localhost:8572`.
+
+## 📦 GHCR CI/CD
+
+Workflow file: `.github/workflows/ghcr.yml`
+
+What it does:
+- On PR: run lint, Go tests, and frontend build
+- On push to `main`/`master` (or version tags): build and push Docker image to GHCR
+- Image name: `ghcr.io/<owner>/<repo>`
+- Tags: `latest` (default branch), `sha-<commit>`, and release tags
+
+Required repository secrets:
+- `VITE_GOOGLE_MAPS_API_KEY` (used at Docker build time for frontend bundle)
+
+Package visibility:
+- GHCR supports private images.
+- If your GitHub repo is private, GHCR package is typically private by default.
+- You can explicitly set package visibility in GitHub: `Package -> Package settings -> Change visibility`.
+
 ## 📝 License
 
 MIT
