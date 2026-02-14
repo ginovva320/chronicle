@@ -17,8 +17,8 @@ function TripListContent() {
     loadTrips();
   }, []);
 
-  const loadTrips = () => {
-    const loadedTrips = StorageService.getTrips();
+  const loadTrips = async () => {
+    const loadedTrips = await StorageService.getTrips();
     // Sort by start date descending (most recent first)
     const sortedTrips = loadedTrips.sort((a, b) =>
       new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
@@ -39,7 +39,7 @@ function TripListContent() {
 
   // Fit map to show all trips
   useEffect(() => {
-    if (map && tripsWithCoordinates.length > 0) {
+    if (map && tripsWithCoordinates.length > 1) {
       const bounds = new google.maps.LatLngBounds();
       tripsWithCoordinates.forEach(trip => {
         bounds.extend(trip.coordinates!);
@@ -78,7 +78,7 @@ function TripListContent() {
         <div className="flex-1 relative">
           <Map
             defaultCenter={mapCenter}
-            defaultZoom={tripsWithCoordinates.length > 0 ? 3 : 2}
+            defaultZoom={5}
             mapId="travelog-map"
             className="w-full h-full"
             colorScheme="LIGHT"

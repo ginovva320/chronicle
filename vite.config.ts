@@ -13,5 +13,14 @@ export default defineConfig({
   server: {
     host: true,
     allowedHosts: true,
-  }
+  },
+  build: {
+    // generates .vite/manifest.json in outDir
+    manifest: true,
+
+    rollupOptions: {
+      // overwrite default .html entry
+      input: "/src/main.tsx",
+    },
+  },
 })

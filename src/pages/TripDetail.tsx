@@ -14,7 +14,7 @@ function TripDetailContent({ trip, onLocationUpdate }: { trip: Trip; onLocationU
 
   // Fit map to show all locations
   useEffect(() => {
-    if (map && trip.locations.length > 0) {
+    if (map && trip.locations.length > 1) {
       const bounds = new google.maps.LatLngBounds();
       trip.locations.forEach(location => {
         bounds.extend(location.coordinates);
@@ -40,7 +40,7 @@ function TripDetailContent({ trip, onLocationUpdate }: { trip: Trip; onLocationU
   const centerOnLocation = (location: Location) => {
     if (map) {
       map.panTo(location.coordinates);
-      map.setZoom(10);
+      map.setZoom(15);
     }
     setSelectedMarker(location.id);
   };
@@ -66,7 +66,7 @@ function TripDetailContent({ trip, onLocationUpdate }: { trip: Trip; onLocationU
         lat: trip.locations.reduce((sum, loc) => sum + loc.coordinates.lat, 0) / trip.locations.length,
         lng: trip.locations.reduce((sum, loc) => sum + loc.coordinates.lng, 0) / trip.locations.length
       }
-    : { lat: 20, lng: 0 };
+    : { lat: trip.coordinates?.lat, lng: trip.coordinates?.lng };
 
   return (
     <div className="h-screen flex flex-col">
@@ -87,7 +87,7 @@ function TripDetailContent({ trip, onLocationUpdate }: { trip: Trip; onLocationU
         <div className="flex-1 relative">
           <Map
             defaultCenter={mapCenter}
-            defaultZoom={trip.locations.length > 0 ? 8 : 2}
+            defaultZoom={15}
             mapId="travelog-map"
             className="w-full h-full"
             colorScheme="LIGHT"
@@ -236,9 +236,9 @@ export default function TripDetail() {
   const { id } = useParams<{ id: string }>();
   const [trip, setTrip] = useState<Trip | null>(null);
 
-  const loadTrip = () => {
+  const loadTrip = async () => {
     if (!id) return;
-    const loadedTrip = StorageService.getTrip(id);
+    const loadedTrip = await StorageService.getTrip(id);
     if (loadedTrip) {
       setTrip(loadedTrip);
     }

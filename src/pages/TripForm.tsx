@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { nanoid } from 'nanoid';
-import { ArrowLeft, Search, MapPin } from 'lucide-react';
+import { ArrowLeft, Search } from 'lucide-react';
 import { APIProvider, useMapsLibrary } from '@vis.gl/react-google-maps';
 import type { Trip } from '../types';
 import { StorageService } from '../services/storage';
@@ -33,20 +33,24 @@ function TripFormContent() {
   // Load the Google Maps Places library
   const places = useMapsLibrary('places');
 
+  const getTrip = async (id: string) => {
+    const trip = await StorageService.getTrip(id);
+    if (trip) {
+      setFormData({
+        name: trip.name,
+        startDate: trip.startDate,
+        endDate: trip.endDate,
+        lat: trip.coordinates?.lat.toString() || '',
+        lng: trip.coordinates?.lng.toString() || '',
+        locationName: '',
+        notes: trip.notes || ''
+      });
+    }
+  }
+
   useEffect(() => {
     if (isEditing) {
-      const trip = StorageService.getTrip(id);
-      if (trip) {
-        setFormData({
-          name: trip.name,
-          startDate: trip.startDate,
-          endDate: trip.endDate,
-          lat: trip.coordinates?.lat.toString() || '',
-          lng: trip.coordinates?.lng.toString() || '',
-          locationName: '',
-          notes: trip.notes || ''
-        });
-      }
+      getTrip(id);
     }
   }, [id, isEditing]);
 

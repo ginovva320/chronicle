@@ -32,19 +32,22 @@ function LocationFormContent() {
 
   useEffect(() => {
     if (isEditing && tripId && locationId) {
-      const trip = StorageService.getTrip(tripId);
-      if (trip) {
-        const location = trip.locations.find(loc => loc.id === locationId);
-        if (location) {
-          setFormData({
-            name: location.name,
-            lat: location.coordinates.lat.toString(),
-            lng: location.coordinates.lng.toString(),
-            notes: location.notes || '',
-            date: location.date || ''
-          });
+      const loadTrip = async () => {
+        const trip = await StorageService.getTrip(tripId);
+        if (trip) {
+          const location = trip.locations.find(loc => loc.id === locationId);
+          if (location) {
+            setFormData({
+              name: location.name,
+              lat: location.coordinates.lat.toString(),
+              lng: location.coordinates.lng.toString(),
+              notes: location.notes || '',
+              date: location.date || ''
+            });
+          }
         }
       }
+      loadTrip();
     }
   }, [tripId, locationId, isEditing]);
 
@@ -102,12 +105,12 @@ function LocationFormContent() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!validate() || !tripId) return;
 
-    const trip = StorageService.getTrip(tripId);
+    const trip = await StorageService.getTrip(tripId);
     if (!trip) return;
 
     const newLocation: Location = {
