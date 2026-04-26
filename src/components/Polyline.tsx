@@ -19,23 +19,32 @@ interface PolylineProps {
   };
 }
 
+interface GooglePolyline {
+  setPath: (path: Array<{ lat: number; lng: number }>) => void;
+  setOptions: (options: PolylineProps['options']) => void;
+  setMap: (map: unknown) => void;
+}
+
 export function Polyline({ path, options }: PolylineProps) {
   const map = useMap();
-  const polylineRef = useRef<any>(null);
+  const polylineRef = useRef<GooglePolyline | null>(null);
 
   useEffect(() => {
     if (!map) return;
 
-    if (!polylineRef.current && (window as any).google) {
-      polylineRef.current = new (window as any).google.maps.Polyline({
+    // Access google.maps from window object
+    const googleMaps = (window as typeof window & { google?: { maps: { Polyline: new (options: unknown) => GooglePolyline } } }).google?.maps;
+
+    if (!polylineRef.current && googleMaps) {
+      polylineRef.current = new googleMaps.Polyline({
         map,
         ...options,
       });
     }
 
-    polylineRef.current.setPath(path);
+    polylineRef.current?.setPath(path);
     if (options) {
-      polylineRef.current.setOptions(options);
+      polylineRef.current?.setOptions(options);
     }
 
     return () => {
