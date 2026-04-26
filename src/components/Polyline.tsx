@@ -2,19 +2,32 @@ import { useEffect, useRef } from 'react';
 import { useMap } from '@vis.gl/react-google-maps';
 
 interface PolylineProps {
-  path: google.maps.LatLngLiteral[];
-  options?: google.maps.PolylineOptions;
+  path: Array<{ lat: number; lng: number }>;
+  options?: {
+    strokeColor?: string;
+    strokeOpacity?: number;
+    strokeWeight?: number;
+    icons?: Array<{
+      icon: {
+        path: string;
+        strokeOpacity: number;
+        scale: number;
+      };
+      offset: string;
+      repeat: string;
+    }>;
+  };
 }
 
 export function Polyline({ path, options }: PolylineProps) {
   const map = useMap();
-  const polylineRef = useRef<google.maps.Polyline | null>(null);
+  const polylineRef = useRef<any>(null);
 
   useEffect(() => {
     if (!map) return;
 
-    if (!polylineRef.current) {
-      polylineRef.current = new google.maps.Polyline({
+    if (!polylineRef.current && (window as any).google) {
+      polylineRef.current = new (window as any).google.maps.Polyline({
         map,
         ...options,
       });

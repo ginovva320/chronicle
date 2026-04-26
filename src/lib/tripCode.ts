@@ -1,4 +1,4 @@
-import type { Trip } from '../services/storage';
+import type { Trip } from '../types';
 
 export function tripCode(trip: Trip, allTrips: Trip[]): string {
   const sorted = [...allTrips].sort(
