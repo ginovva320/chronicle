@@ -1,14 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Search } from 'lucide-react';
 import { APIProvider, useMapsLibrary } from '@vis.gl/react-google-maps';
 import type { Trip } from '../types';
 import { StorageService } from '../services/storage';
-import { getRandomColor } from '@/lib/utils';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Button } from '@/components/ui/button';
-import { Field, FieldLabel, FieldError, FieldGroup } from '@/components/ui/field';
+import { Field, ArchivalInput, ArchivalTextarea } from '../components/chrome/Field';
+import { tripCode } from '../lib/tripCode';
 
 type PlacesAutocomplete = {
   getPlace: () => {
@@ -24,6 +20,15 @@ type PlacesAutocomplete = {
   addListener: (eventName: string, handler: () => void) => void;
 };
 
+const TRIP_COLORS = [
+  'oklch(0.62 0.16 45)',
+  'oklch(0.55 0.10 230)',
+  'oklch(0.55 0.12 25)',
+  'oklch(0.65 0.13 95)',
+  'oklch(0.55 0.13 60)',
+  'oklch(0.45 0.06 250)',
+];
+
 function TripFormContent() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -36,9 +41,11 @@ function TripFormContent() {
     lat: '',
     lng: '',
     locationName: '',
-    notes: ''
+    notes: '',
+    color: TRIP_COLORS[0]
   });
 
+  const [allTrips, setAllTrips] = useState<Trip[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(Boolean(isEditing));
@@ -46,13 +53,16 @@ function TripFormContent() {
   const autocompleteInputRef = useRef<HTMLInputElement>(null);
   const autocompleteRef = useRef<PlacesAutocomplete | null>(null);
 
-  // Load the Google Maps Places library
   const places = useMapsLibrary('places');
 
   const getTrip = async (id: string) => {
     try {
       setLoading(true);
-      const trip = await StorageService.getTrip(id);
+      const [trip, trips] = await Promise.all([
+        StorageService.getTrip(id),
+        StorageService.getTrips()
+      ]);
+      setAllTrips(trips);
       if (trip) {
         setFormData({
           name: trip.name,
@@ -61,7 +71,8 @@ function TripFormContent() {
           lat: trip.coordinates?.lat.toString() || '',
           lng: trip.coordinates?.lng.toString() || '',
           locationName: '',
-          notes: trip.notes || ''
+          notes: trip.notes || '',
+          color: trip.color || TRIP_COLORS[0]
         });
       } else {
         setSubmitError('Trip not found.');
@@ -78,10 +89,10 @@ function TripFormContent() {
       getTrip(id);
     } else {
       setLoading(false);
+      StorageService.getTrips().then(setAllTrips);
     }
   }, [id, isEditing]);
 
-  // Initialize Google Places Autocomplete
   useEffect(() => {
     if (!autocompleteInputRef.current || !places) return;
 
@@ -101,7 +112,6 @@ function TripFormContent() {
           const placeName = place.name || place.formatted_address || '';
           setFormData(prev => ({
             ...prev,
-            name: placeName,
             locationName: placeName,
             lat: location.lat().toString(),
             lng: location.lng().toString(),
@@ -147,14 +157,14 @@ function TripFormContent() {
     setSubmitError(null);
     setIsSubmitting(true);
 
-    const tripData: Omit<Trip, 'id' | 'locations' | 'color'> & Partial<Pick<Trip, 'coordinates'>> = {
+    const tripData: Omit<Trip, 'id' | 'locations'> & Partial<Pick<Trip, 'coordinates'>> = {
       name: formData.name,
       startDate: formData.startDate,
       endDate: formData.endDate,
-      notes: formData.notes.trim() || undefined
+      notes: formData.notes.trim() || undefined,
+      color: formData.color
     };
 
-    // Add coordinates if provided
     if (formData.lat && formData.lng) {
       tripData.coordinates = {
         lat: parseFloat(formData.lat),
@@ -169,7 +179,7 @@ function TripFormContent() {
         const newTrip: Omit<Trip, 'id'> = {
           ...tripData,
           locations: [],
-          color: getRandomColor()
+          color: formData.color
         };
         await StorageService.addTrip(newTrip);
       }
@@ -183,149 +193,160 @@ function TripFormContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-muted-foreground">Loading trip...</p>
+      <div className="min-h-screen flex items-center justify-center font-mono text-ink-3">
+        <p>Loading trip...</p>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen p-6">
-      <div className="max-w-2xl mx-auto">
-        {/* Back Button */}
-        <Button
-          variant="ghost"
-          onClick={() => navigate('/')}
-          className="mb-6"
-        >
-          <ArrowLeft size={20} />
-          <span>Back to trips</span>
-        </Button>
+  const code = isEditing && id ? tripCode({ id, name: formData.name, startDate: formData.startDate, endDate: formData.endDate, locations: [], color: formData.color } as Trip, allTrips) : '';
 
-        {/* Form Card */}
-        <div className="bg-card border rounded-lg p-8 shadow-md">
-          <h1 className="text-3xl font-bold mb-6">
-            {isEditing ? 'Edit Trip' : 'Create New Trip'}
+  return (
+    <div className="min-h-screen bg-paper">
+      <div className="max-w-[980px] mx-auto">
+        {/* TOP BAR */}
+        <div className="px-9 py-5 border-b border-ink flex justify-between items-center">
+          <button
+            onClick={() => navigate('/')}
+            className="font-mono text-[11px] uppercase tracking-[0.1em] text-ink hover:text-ink-2"
+          >
+            ← Cancel / {isEditing ? `Edit Entry · ${code}` : 'New Entry'}
+          </button>
+          <span className="font-mono text-[10px] text-ink-3 uppercase tracking-[0.14em]">
+            FORM 02 · TRIP
+          </span>
+        </div>
+
+        {/* FORM BODY */}
+        <div className="px-16 py-10">
+          <div className="font-mono text-[11px] text-ink-3 uppercase tracking-[0.14em] mb-3">
+            {isEditing ? 'EDIT TRIP RECORD' : 'FILE A NEW TRIP'}
+          </div>
+          <h1 className="font-serif font-medium text-[56px] leading-[0.95] tracking-[-0.025em] mb-10">
+            {isEditing ? formData.name : (
+              <>Where did<br />you go?</>
+            )}
           </h1>
+
           {submitError && (
-            <div className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            <div className="border-l-2 border-destructive bg-destructive/10 px-4 py-3 font-mono text-[11px] text-destructive mb-8">
               {submitError}
             </div>
           )}
 
           <form onSubmit={handleSubmit}>
-            <FieldGroup>
-              {/* Search at Top */}
-              <Field>
-                <FieldLabel>
-                  Search for a place {!places && <span className="text-xs text-muted-foreground">(Loading...)</span>}
-                </FieldLabel>
-                <div className="relative">
-                  <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                  <input
-                    ref={autocompleteInputRef}
-                    type="text"
-                    placeholder={places ? "Start typing to search places..." : "Loading Places API..."}
-                    disabled={!places}
-                    className="flex h-9 w-full rounded-md border border-input bg-background pl-10 pr-4 py-1 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+            <div className="grid grid-cols-2 gap-8">
+              <div className="col-span-2">
+                <Field label="TRIP NAME" error={errors.name}>
+                  <ArchivalInput
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="Summer Europe Adventure"
                   />
-                </div>
+                </Field>
+              </div>
+
+              <Field label="SEARCH A PLACE" help="Auto-fill coordinates from Google Places">
+                <input
+                  ref={autocompleteInputRef}
+                  type="text"
+                  placeholder={places ? "Start typing..." : "Loading..."}
+                  disabled={!places}
+                  className="w-full font-mono text-[13px] text-ink bg-transparent border-0 border-b border-ink px-0 py-2 outline-none focus:border-b-2 focus:border-accent transition-colors disabled:opacity-50"
+                />
               </Field>
 
-              {/* Coordinates Display */}
-              {(formData.lat && formData.lng) ? (
-                <div className="bg-muted/50 rounded-md p-4">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Coordinates</p>
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Latitude:</span>
-                      <p className="font-medium">{formData.lat}</p>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Longitude:</span>
-                      <p className="font-medium">{formData.lng}</p>
-                    </div>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setFormData({ ...formData, lat: '', lng: '', locationName: '', name: '' })}
-                    className="mt-3 text-xs"
-                  >
-                    Clear location
-                  </Button>
-                </div>
+              {formData.lat && formData.lng ? (
+                <>
+                  <Field label="LATITUDE">
+                    <ArchivalInput
+                      value={formData.lat}
+                      onChange={(e) => setFormData({ ...formData, lat: e.target.value })}
+                      disabled
+                    />
+                  </Field>
+                  <Field label="LONGITUDE">
+                    <ArchivalInput
+                      value={formData.lng}
+                      onChange={(e) => setFormData({ ...formData, lng: e.target.value })}
+                      disabled
+                    />
+                  </Field>
+                </>
               ) : (
-                <div className="text-sm text-muted-foreground p-4 bg-muted/30 rounded-md">
-                  Search for a place above to set trip location
+                <div className="col-span-2 font-mono text-[11px] text-ink-3 py-3 border-b border-rule-soft">
+                  No anchor coordinates set
                 </div>
               )}
 
-              <Field>
-                <FieldLabel htmlFor="name">Trip Name</FieldLabel>
-                <Input
-                  id="name"
-                  placeholder="e.g., Summer Europe Adventure"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="bg-background"
-                  aria-invalid={!!errors.name}
-                />
-                <FieldError>{errors.name}</FieldError>
-              </Field>
-
-              <Field>
-                <FieldLabel htmlFor="startDate">Start Date</FieldLabel>
-                <Input
-                  id="startDate"
+              <Field label="START DATE" error={errors.startDate}>
+                <ArchivalInput
                   type="date"
                   value={formData.startDate}
                   onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                  className="bg-background [color-scheme:light]"
-                  aria-invalid={!!errors.startDate}
                 />
-                <FieldError>{errors.startDate}</FieldError>
               </Field>
 
-              <Field>
-                <FieldLabel htmlFor="endDate">End Date</FieldLabel>
-                <Input
-                  id="endDate"
+              <Field label="END DATE" error={errors.endDate}>
+                <ArchivalInput
                   type="date"
                   value={formData.endDate}
                   onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                  className="bg-background [color-scheme:light]"
-                  aria-invalid={!!errors.endDate}
-                />
-                <FieldError>{errors.endDate}</FieldError>
-              </Field>
-
-              <Field>
-                <FieldLabel htmlFor="notes">Notes (optional)</FieldLabel>
-                <Textarea
-                  id="notes"
-                  placeholder="Add any notes about this trip..."
-                  rows={3}
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  className="bg-background"
                 />
               </Field>
-            </FieldGroup>
 
-            <div className="flex gap-3 pt-4">
-              <Button type="submit" className="flex-1" disabled={isSubmitting}>
-                {isSubmitting ? 'Saving...' : isEditing ? 'Update Trip' : 'Create Trip'}
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => navigate('/')}
-                disabled={isSubmitting}
-              >
-                Cancel
-              </Button>
+              <div className="col-span-2">
+                <Field label="NOTES" help="Optional details about this trip">
+                  <ArchivalTextarea
+                    value={formData.notes}
+                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                    placeholder="Add any notes about this trip..."
+                  />
+                </Field>
+              </div>
+
+              <div className="col-span-2">
+                <Field label="COLOR">
+                  <div className="flex gap-3 pt-2">
+                    {TRIP_COLORS.map((color) => (
+                      <button
+                        key={color}
+                        type="button"
+                        onClick={() => setFormData({ ...formData, color })}
+                        className="w-7 h-7 transition-all"
+                        style={{
+                          backgroundColor: color,
+                          border: formData.color === color ? '2px solid var(--ink)' : '1px solid var(--rule-soft)'
+                        }}
+                      />
+                    ))}
+                  </div>
+                </Field>
+              </div>
+            </div>
+
+            {/* FOOTER */}
+            <div className="mt-10 pt-5 border-t border-ink flex justify-between items-center">
+              <span className="font-mono text-[10px] text-ink-3 uppercase tracking-[0.12em]">
+                All fields required except notes.
+              </span>
+              <div className="flex gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => navigate('/')}
+                  disabled={isSubmitting}
+                  className="font-mono text-[11px] font-semibold uppercase tracking-[0.12em] px-5 py-3 border border-ink text-ink hover:bg-paper-2 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="font-mono text-[11px] font-semibold uppercase tracking-[0.12em] px-5.5 py-3 bg-ink text-paper hover:bg-ink-2 disabled:opacity-50"
+                >
+                  {isSubmitting ? 'Saving...' : isEditing ? 'Save changes →' : 'File trip →'}
+                </button>
+              </div>
             </div>
           </form>
         </div>
