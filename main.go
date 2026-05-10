@@ -95,7 +95,7 @@ func runProdServer() {
 	defer closeStorage()
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/" || r.URL.Path == "/index.html" {
+		if r.URL.Path == "/" || r.URL.Path == "/index.html" || strings.HasPrefix(r.URL.Path, "/trip") {
 			viteFragment, err := vite.HTMLFragment(vite.Config{
 				FS:    distFS,
 				IsDev: false,
