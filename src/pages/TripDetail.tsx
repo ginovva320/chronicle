@@ -7,13 +7,16 @@ import type { Trip, Location } from '../types';
 import { StorageService } from '../services/storage';
 import { MetaRow } from '../components/chrome/MetaRow';
 import { fmtRange, tripDays, fmtDate } from '../lib/dates';
+import { tripCode } from '../lib/tripCode';
 
 function TripDetailContent({
   trip,
+  allTrips,
   onLocationUpdate,
   setError
 }: {
   trip: Trip;
+  allTrips: Trip[];
   onLocationUpdate: () => Promise<void>;
   setError: (value: string | null) => void;
 }) {
@@ -79,6 +82,11 @@ function TripDetailContent({
       }
     : trip.coordinates || { lat: 0, lng: 0 };
 
+  const code = tripCode(trip, allTrips);
+  const region = trip.coordinates
+    ? `${trip.coordinates.lat.toFixed(1)}°, ${trip.coordinates.lng.toFixed(1)}°`
+    : 'No anchor';
+
   return (
     <div className="h-screen flex flex-col">
       {/* BREADCRUMB BAR */}
@@ -87,7 +95,7 @@ function TripDetailContent({
           onClick={() => navigate('/')}
           className="font-mono text-[11px] uppercase tracking-[0.1em] text-ink flex items-center gap-2 hover:text-ink-2"
         >
-          ← Chronicle / Trips
+          ← Chronicle / Trips / {code}
         </button>
         <div className="flex gap-2">
           <button
@@ -108,7 +116,10 @@ function TripDetailContent({
       {/* TITLE BLOCK */}
       <div className="px-9 pt-8 pb-6 border-b border-rule-soft flex gap-10">
         <div className="flex-1">
-          <h1 className="font-serif font-medium text-[88px] leading-[0.95] tracking-[-0.025em]">
+          <div className="font-mono text-[11px] text-ink-3 uppercase tracking-[0.14em]">
+            {code} · {region}
+          </div>
+          <h1 className="font-serif font-medium text-[88px] leading-[0.95] tracking-[-0.025em] mt-3">
             {trip.name}
           </h1>
           {trip.notes && (
@@ -121,6 +132,9 @@ function TripDetailContent({
           <MetaRow k="DATES" v={fmtRange(trip.startDate, trip.endDate)} />
           <MetaRow k="DURATION" v={`${tripDays(trip.startDate, trip.endDate)} days`} />
           <MetaRow k="STOPS" v={trip.locations.length.toString()} />
+          {trip.coordinates && (
+            <MetaRow k="ANCHOR" v={`${trip.coordinates.lat.toFixed(3)}°, ${trip.coordinates.lng.toFixed(3)}°`} />
+          )}
         </div>
       </div>
 
@@ -128,7 +142,11 @@ function TripDetailContent({
       <div className="flex-1 grid grid-cols-[1fr_480px] grid-rows-[minmax(0,1fr)] overflow-hidden">
         {/* MAP PLATE */}
         <div className="relative p-6 bg-paper-2 border-r border-ink min-h-0">
-          <div className="border border-ink bg-paper h-full">
+          <div className="flex justify-between font-mono text-[10px] text-ink-3 uppercase tracking-[0.1em]">
+            <span>Plate II — Route</span>
+            <span>Scale ~ 1 : varies</span>
+          </div>
+          <div className="mt-3 border border-ink bg-paper h-[calc(100%-32px)]">
             <Map
               defaultCenter={mapCenter}
               defaultZoom={12}
@@ -214,7 +232,7 @@ function TripDetailContent({
                     <div>
                       <div className="font-semibold text-[15px] text-ink">{location.name}</div>
                       <div className="font-mono text-[10px] text-ink-3 uppercase tracking-[0.1em] mt-1">
-                        {location.date ? fmtDate(location.date, 'MMM d, yyyy') : '—'}
+                        {location.date ? fmtDate(location.date, 'MMM d, yyyy') : 'UNDATED'} · {location.coordinates.lat.toFixed(2)}°, {location.coordinates.lng.toFixed(2)}°
                       </div>
                       {location.notes && (
                         <p className="text-[12px] text-ink-2 leading-[1.5] mt-2">{location.notes}</p>
@@ -254,6 +272,7 @@ function TripDetailContent({
 export default function TripDetail() {
   const { id } = useParams<{ id: string }>();
   const [trip, setTrip] = useState<Trip | null>(null);
+  const [allTrips, setAllTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -264,9 +283,13 @@ export default function TripDetail() {
     }
     try {
       setLoading(true);
-      const loadedTrip = await StorageService.getTrip(id);
+      const [loadedTrip, trips] = await Promise.all([
+        StorageService.getTrip(id),
+        StorageService.getTrips()
+      ]);
       if (loadedTrip) {
         setTrip(loadedTrip);
+        setAllTrips(trips);
         setError(null);
       } else {
         setError('Trip not found.');
@@ -307,7 +330,7 @@ export default function TripDetail() {
           {error}
         </div>
       )}
-      <TripDetailContent trip={trip} onLocationUpdate={loadTrip} setError={setError} />
+      <TripDetailContent trip={trip} allTrips={allTrips} onLocationUpdate={loadTrip} setError={setError} />
     </APIProvider>
   );
 }
