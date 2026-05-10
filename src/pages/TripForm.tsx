@@ -166,6 +166,7 @@ function TripFormContent() {
     try {
       if (isEditing && id) {
         await StorageService.updateTrip(id, tripData);
+        navigate(`/trip/${id}`);
       } else {
         const newTrip: Omit<Trip, 'id'> = {
           ...tripData,
@@ -173,8 +174,8 @@ function TripFormContent() {
           color: formData.color
         };
         await StorageService.addTrip(newTrip);
+        navigate('/');
       }
-      navigate('/');
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : 'Failed to save trip.');
     } finally {
