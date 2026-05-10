@@ -160,10 +160,13 @@ function TripDetailContent({
                   position={location.coordinates}
                   onClick={() => centerOnLocation(location)}
                 >
-                  <div className="cursor-pointer w-7 h-7 rounded-full bg-paper border border-accent flex items-center justify-center">
-                    <span className="font-mono text-[10px] font-semibold text-accent">
-                      {(idx + 1).toString().padStart(2, '0')}
-                    </span>
+                  <div className="cursor-pointer" style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.35))' }}>
+                    <svg width="28" height="36" viewBox="0 0 28 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M14 0C6.268 0 0 6.268 0 14c0 9.333 14 22 14 22S28 23.333 28 14C28 6.268 21.732 0 14 0z" fill="oklch(0.62 0.16 45)" />
+                      <text x="14" y="18" textAnchor="middle" dominantBaseline="middle" fill="white" fontFamily="'IBM Plex Mono', ui-monospace, monospace" fontSize="10" fontWeight="600">
+                        {idx + 1}
+                      </text>
+                    </svg>
                   </div>
                 </AdvancedMarker>
               ))}

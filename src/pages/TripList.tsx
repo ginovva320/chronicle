@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Trash2, Edit } from 'lucide-react';
-import { APIProvider, Map, AdvancedMarker, InfoWindow, useMap } from '@vis.gl/react-google-maps';
+import { APIProvider, Map, AdvancedMarker, Pin, InfoWindow, useMap } from '@vis.gl/react-google-maps';
 import type { Trip } from '../types';
 import { StorageService } from '../services/storage';
 import { Wordmark } from '../components/chrome/Wordmark';
@@ -132,12 +132,7 @@ function TripListContent() {
                       position={trip.coordinates!}
                       onClick={() => setSelectedMarker(trip.id)}
                     >
-                      <div className="cursor-pointer">
-                        <svg width="18" height="18" viewBox="0 0 18 18">
-                          <circle cx="9" cy="9" r="9" fill="none" stroke="var(--ink)" strokeWidth="1" opacity="0.45" />
-                          <circle cx="9" cy="9" r="3.5" fill="var(--ink)" />
-                        </svg>
-                      </div>
+                      <Pin scale={0.6} />
                     </AdvancedMarker>
                   ))}
 
