@@ -181,18 +181,12 @@ function LocationFormContent() {
             onClick={() => navigate(`/trip/${tripId}`)}
             className="font-mono text-[11px] uppercase tracking-[0.1em] text-ink hover:text-ink-2"
           >
-            ← Cancel / {trip.name} / {isEditing ? 'Edit Stop' : 'New Stop'}
+            ← {trip.name} / {isEditing ? 'Edit stop' : 'New stop'}
           </button>
-          <span className="font-mono text-[10px] text-ink-3 uppercase tracking-[0.14em]">
-            FORM 03 · LOCATION
-          </span>
         </div>
 
         {/* FORM BODY */}
         <div className="px-16 py-10">
-          <div className="font-mono text-[11px] text-ink-3 uppercase tracking-[0.14em] mb-3">
-            {isEditing ? 'EDIT STOP' : 'ADD A STOP'}
-          </div>
           <h1 className="font-serif font-medium text-[56px] leading-[0.95] tracking-[-0.025em] mb-10">
             {isEditing ? 'Edit stop.' : 'Add a stop.'}
           </h1>
@@ -215,18 +209,6 @@ function LocationFormContent() {
                 />
               </Field>
 
-              {formData.lat && formData.lng ? (
-                <div className="font-mono text-[11px] text-ink-3 py-3 border-b border-ink">
-                  <div className="uppercase tracking-[0.14em] mb-2">COORDINATES</div>
-                  <div className="text-[13px] text-ink">
-                    {parseFloat(formData.lat).toFixed(6)}°, {parseFloat(formData.lng).toFixed(6)}°
-                  </div>
-                </div>
-              ) : (
-                <div className="font-mono text-[11px] text-ink-3 py-3 border-b border-rule-soft">
-                  No coordinates set — search for a place above
-                </div>
-              )}
 
               <Field label="LOCATION NAME" error={errors.name}>
                 <ArchivalInput

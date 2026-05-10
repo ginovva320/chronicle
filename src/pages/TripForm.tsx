@@ -4,7 +4,6 @@ import { APIProvider, useMapsLibrary } from '@vis.gl/react-google-maps';
 import type { Trip } from '../types';
 import { StorageService } from '../services/storage';
 import { Field, ArchivalInput, ArchivalTextarea } from '../components/chrome/Field';
-import { tripCode } from '../lib/tripCode';
 
 type PlacesAutocomplete = {
   getPlace: () => {
@@ -45,7 +44,6 @@ function TripFormContent() {
     color: TRIP_COLORS[0]
   });
 
-  const [allTrips, setAllTrips] = useState<Trip[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(Boolean(isEditing));
@@ -57,11 +55,7 @@ function TripFormContent() {
   const getTrip = async (id: string) => {
     try {
       setLoading(true);
-      const [trip, trips] = await Promise.all([
-        StorageService.getTrip(id),
-        StorageService.getTrips()
-      ]);
-      setAllTrips(trips);
+      const trip = await StorageService.getTrip(id);
       if (trip) {
         setFormData({
           name: trip.name,
@@ -88,7 +82,6 @@ function TripFormContent() {
       getTrip(id);
     } else {
       setLoading(false);
-      StorageService.getTrips().then(setAllTrips);
     }
   }, [id, isEditing]);
 
@@ -191,8 +184,6 @@ function TripFormContent() {
     );
   }
 
-  const code = isEditing && id ? tripCode({ id, name: formData.name, startDate: formData.startDate, endDate: formData.endDate, locations: [], color: formData.color } as Trip, allTrips) : '';
-
   return (
     <div className="min-h-screen bg-paper">
       <div className="max-w-[980px] mx-auto">
@@ -202,18 +193,12 @@ function TripFormContent() {
             onClick={() => navigate('/')}
             className="font-mono text-[11px] uppercase tracking-[0.1em] text-ink hover:text-ink-2"
           >
-            ← Cancel / {isEditing ? `Edit Entry · ${code}` : 'New Entry'}
+            ← {isEditing ? 'Edit trip' : 'New trip'}
           </button>
-          <span className="font-mono text-[10px] text-ink-3 uppercase tracking-[0.14em]">
-            FORM 02 · TRIP
-          </span>
         </div>
 
         {/* FORM BODY */}
         <div className="px-16 py-10">
-          <div className="font-mono text-[11px] text-ink-3 uppercase tracking-[0.14em] mb-3">
-            {isEditing ? 'EDIT TRIP RECORD' : 'FILE A NEW TRIP'}
-          </div>
           <h1 className="font-serif font-medium text-[56px] leading-[0.95] tracking-[-0.025em] mb-10">
             {isEditing ? formData.name : (
               <>Where did<br />you go?</>
@@ -248,26 +233,9 @@ function TripFormContent() {
                 />
               </Field>
 
-              {formData.lat && formData.lng ? (
-                <>
-                  <Field label="LATITUDE">
-                    <ArchivalInput
-                      value={formData.lat}
-                      onChange={(e) => setFormData({ ...formData, lat: e.target.value })}
-                      disabled
-                    />
-                  </Field>
-                  <Field label="LONGITUDE">
-                    <ArchivalInput
-                      value={formData.lng}
-                      onChange={(e) => setFormData({ ...formData, lng: e.target.value })}
-                      disabled
-                    />
-                  </Field>
-                </>
-              ) : (
-                <div className="col-span-2 font-mono text-[11px] text-ink-3 py-3 border-b border-rule-soft">
-                  No anchor coordinates set
+              {formData.lat && formData.lng && (
+                <div className="col-span-2 font-mono text-[11px] text-ink-3 py-2">
+                  {formData.locationName ? `Location: ${formData.locationName}` : '✓ Location set'}
                 </div>
               )}
 
@@ -336,7 +304,7 @@ function TripFormContent() {
                   disabled={isSubmitting}
                   className="font-mono text-[11px] font-semibold uppercase tracking-[0.12em] px-5.5 py-3 bg-ink text-paper hover:bg-ink-2 disabled:opacity-50"
                 >
-                  {isSubmitting ? 'Saving...' : isEditing ? 'Save changes →' : 'File trip →'}
+                  {isSubmitting ? 'Saving...' : isEditing ? 'Save changes →' : 'Save trip →'}
                 </button>
               </div>
             </div>
