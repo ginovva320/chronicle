@@ -239,7 +239,7 @@ func (s *Storage) scanTrip(scanner interface {
 	var t Trip
 	var dbID int64
 	var notes sql.NullString
-	var coordinatesJSON, locationsJSON string
+	var coordinatesJSON, locationsJSON sql.NullString
 
 	err := scanner.Scan(
 		&dbID, &t.Name, &t.StartDate, &t.EndDate, &t.Color, &notes, &coordinatesJSON, &locationsJSON,
@@ -250,17 +250,17 @@ func (s *Storage) scanTrip(scanner interface {
 
 	t.ID = fmt.Sprintf("%d", dbID)
 
-	if locationsJSON != "" {
-		if err := json.Unmarshal([]byte(locationsJSON), &t.Locations); err != nil {
+	if locationsJSON.Valid && locationsJSON.String != "" {
+		if err := json.Unmarshal([]byte(locationsJSON.String), &t.Locations); err != nil {
 			return Trip{}, fmt.Errorf("failed to unmarshal locations: %w", err)
 		}
 	} else {
 		t.Locations = []Location{}
 	}
 
-	if coordinatesJSON != "" {
+	if coordinatesJSON.Valid && coordinatesJSON.String != "" {
 		var coords Coordinate
-		if err := json.Unmarshal([]byte(coordinatesJSON), &coords); err != nil {
+		if err := json.Unmarshal([]byte(coordinatesJSON.String), &coords); err != nil {
 			return Trip{}, fmt.Errorf("failed to unmarshal coordinates: %w", err)
 		}
 		t.Coordinates = &coords
