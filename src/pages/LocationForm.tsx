@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { nanoid } from 'nanoid';
 import { APIProvider, useMapsLibrary } from '@vis.gl/react-google-maps';
@@ -17,7 +17,7 @@ type PlacesAutocomplete = {
       };
     };
   };
-  addListener: (eventName: string, handler: () => void) => void;
+  addListener: (eventName: string, handler: () => void) => { remove: () => void };
 };
 
 function LocationFormContent() {
@@ -38,8 +38,7 @@ function LocationFormContent() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const autocompleteInputRef = useRef<HTMLInputElement>(null);
-  const autocompleteRef = useRef<PlacesAutocomplete | null>(null);
+  const [autocompleteInput, setAutocompleteInput] = useState<HTMLInputElement | null>(null);
 
   const places = useMapsLibrary('places');
 
@@ -80,38 +79,30 @@ function LocationFormContent() {
   }, [tripId, locationId, isEditing]);
 
   useEffect(() => {
-    if (!autocompleteInputRef.current || !places) return;
+    if (!autocompleteInput || !places) return;
 
-    try {
-      autocompleteRef.current = new places.Autocomplete(
-        autocompleteInputRef.current,
-        {
-          fields: ['name', 'geometry', 'formatted_address'],
-        }
-      ) as PlacesAutocomplete;
+    const autocomplete = new places.Autocomplete(autocompleteInput, {
+      fields: ['name', 'geometry', 'formatted_address'],
+    }) as PlacesAutocomplete;
 
-      autocompleteRef.current.addListener('place_changed', () => {
-        const place = autocompleteRef.current?.getPlace();
-        const location = place?.geometry?.location;
+    const listener = autocomplete.addListener('place_changed', () => {
+      const place = autocomplete.getPlace();
+      const location = place?.geometry?.location;
 
-        if (location) {
-          const placeName = place.name || place.formatted_address || '';
-          setFormData(prev => ({
-            ...prev,
-            name: placeName,
-            lat: location.lat().toString(),
-            lng: location.lng().toString(),
-          }));
+      if (location) {
+        const placeName = place.name || place.formatted_address || '';
+        setFormData(prev => ({
+          ...prev,
+          name: placeName,
+          lat: location.lat().toString(),
+          lng: location.lng().toString(),
+        }));
+        autocompleteInput.value = '';
+      }
+    });
 
-          if (autocompleteInputRef.current) {
-            autocompleteInputRef.current.value = '';
-          }
-        }
-      });
-    } catch (error) {
-      console.error('Error initializing autocomplete:', error);
-    }
-  }, [places]);
+    return () => { listener.remove(); };
+  }, [autocompleteInput, places]);
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
@@ -216,7 +207,7 @@ function LocationFormContent() {
             <div className="space-y-8">
               <Field label="SEARCH A PLACE" help="Auto-fill location name and coordinates" error={errors.coordinates}>
                 <input
-                  ref={autocompleteInputRef}
+                  ref={setAutocompleteInput}
                   type="text"
                   placeholder={places ? "Start typing..." : "Loading..."}
                   disabled={!places}
