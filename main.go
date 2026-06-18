@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	"anid.dev/chronicle/internal/mcp"
 	"anid.dev/chronicle/internal/storage"
 	"anid.dev/chronicle/internal/trip"
 	"github.com/olivere/vite"
@@ -147,6 +148,8 @@ func registerAPI(mux *http.ServeMux) func() {
 	tripHandler := trip.NewHandler(store)
 	mux.Handle("/api/trips", tripHandler)
 	mux.Handle("/api/trips/", tripHandler)
+
+	mux.Handle("/mcp", mcp.NewHandler(store))
 
 	return func() {
 		if err := store.Close(); err != nil {

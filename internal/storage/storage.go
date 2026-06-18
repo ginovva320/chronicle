@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	_ "github.com/mattn/go-sqlite3" // SQLite driver
 )
@@ -46,6 +47,10 @@ type Trip struct {
 // Storage holds the database connection and methods for CRUD operations.
 type Storage struct {
 	db *sql.DB
+	// locMu serializes read-modify-write mutations of a trip's embedded
+	// locations array (see MutateLocations) so concurrent callers cannot clobber
+	// each other's changes.
+	locMu sync.Mutex
 }
 
 // NewStorage initializes the database, applies migrations, and optionally seeds data.
@@ -155,8 +160,38 @@ func (s *Storage) AddTrip(t Trip) (int64, error) {
 	return res.LastInsertId()
 }
 
-// UpdateTrip updates specific fields of an existing trip.
+// UpdateTrip updates specific fields of an existing trip. It is serialized with
+// other trip writes (UpdateTripAtomic, MutateLocations) via locMu.
 func (s *Storage) UpdateTrip(id int64, updates map[string]interface{}) error {
+	s.locMu.Lock()
+	defer s.locMu.Unlock()
+	return s.updateTripLocked(id, updates)
+}
+
+// UpdateTripAtomic reads the current trip, lets prepare derive the final set of
+// updates (and reject the change) against that fresh snapshot, then writes — all
+// under locMu. This closes the read-validate-write race where two concurrent
+// partial patches each validate against the original state and together persist
+// an invalid trip (e.g. an inverted date range). Returns sql.ErrNoRows if the
+// trip does not exist.
+func (s *Storage) UpdateTripAtomic(id int64, prepare func(current Trip) (map[string]interface{}, error)) error {
+	s.locMu.Lock()
+	defer s.locMu.Unlock()
+
+	current, err := s.GetTrip(id)
+	if err != nil {
+		return err // sql.ErrNoRows when the trip is missing
+	}
+	updates, err := prepare(current)
+	if err != nil {
+		return err
+	}
+	return s.updateTripLocked(id, updates)
+}
+
+// updateTripLocked is the write body shared by UpdateTrip and UpdateTripAtomic.
+// Callers must hold locMu.
+func (s *Storage) updateTripLocked(id int64, updates map[string]interface{}) error {
 	setClauses := []string{}
 	args := []interface{}{}
 
@@ -184,6 +219,13 @@ func (s *Storage) UpdateTrip(id int64, updates map[string]interface{}) error {
 			setClauses = append(setClauses, "locations_json = ?")
 			args = append(args, string(jsonBytes))
 		case "coordinates":
+			if val == nil {
+				// Clearing coordinates: store SQL NULL so scanTrip reads it back
+				// as a nil pointer rather than a bogus {0,0}.
+				setClauses = append(setClauses, "coordinates_json = ?")
+				args = append(args, nil)
+				continue
+			}
 			jsonBytes, err := json.Marshal(val)
 			if err != nil {
 				return fmt.Errorf("failed to marshal coordinates for update: %w", err)
@@ -205,6 +247,54 @@ func (s *Storage) UpdateTrip(id int64, updates map[string]interface{}) error {
 		return err
 	}
 
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
+
+// MutateLocations performs an atomic read-modify-write of a trip's locations
+// array. The mutate callback receives the trip's current locations and returns
+// the desired next state; the whole operation is serialized by locMu so two
+// concurrent callers cannot read the same array and clobber each other's writes.
+// Returns sql.ErrNoRows if the trip does not exist.
+func (s *Storage) MutateLocations(id int64, mutate func(current []Location) ([]Location, error)) error {
+	s.locMu.Lock()
+	defer s.locMu.Unlock()
+
+	var locationsJSON sql.NullString
+	if err := s.db.QueryRow("SELECT locations_json FROM trips WHERE id = ?", id).Scan(&locationsJSON); err != nil {
+		return err // sql.ErrNoRows when the trip is missing
+	}
+
+	current := []Location{}
+	if locationsJSON.Valid && locationsJSON.String != "" {
+		if err := json.Unmarshal([]byte(locationsJSON.String), &current); err != nil {
+			return fmt.Errorf("failed to unmarshal locations: %w", err)
+		}
+	}
+
+	next, err := mutate(current)
+	if err != nil {
+		return err
+	}
+	if next == nil {
+		next = []Location{}
+	}
+
+	nextJSON, err := json.Marshal(next)
+	if err != nil {
+		return fmt.Errorf("failed to marshal locations: %w", err)
+	}
+
+	res, err := s.db.Exec("UPDATE trips SET locations_json = ? WHERE id = ?", string(nextJSON), id)
+	if err != nil {
+		return err
+	}
 	rowsAffected, err := res.RowsAffected()
 	if err != nil {
 		return err
@@ -258,7 +348,7 @@ func (s *Storage) scanTrip(scanner interface {
 		t.Locations = []Location{}
 	}
 
-	if coordinatesJSON.Valid && coordinatesJSON.String != "" {
+	if coordinatesJSON.Valid && coordinatesJSON.String != "" && coordinatesJSON.String != "null" {
 		var coords Coordinate
 		if err := json.Unmarshal([]byte(coordinatesJSON.String), &coords); err != nil {
 			return Trip{}, fmt.Errorf("failed to unmarshal coordinates: %w", err)

@@ -96,7 +96,7 @@ func (h *Handler) addTripHandler(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
-	if validationErrors := validateTripCreate(&newTrip); validationErrors != nil {
+	if validationErrors := ValidateTripCreate(&newTrip); validationErrors != nil {
 		writeValidationError(w, http.StatusBadRequest, validationErrors)
 		return
 	}
@@ -136,7 +136,7 @@ func (h *Handler) updateTripHandler(w http.ResponseWriter, r *http.Request, id i
 		writeError(w, http.StatusBadRequest, "Invalid update payload")
 		return
 	}
-	if validationErrors := validateTripUpdates(updates); validationErrors != nil {
+	if validationErrors := ValidateTripUpdates(updates); validationErrors != nil {
 		writeValidationError(w, http.StatusBadRequest, validationErrors)
 		return
 	}

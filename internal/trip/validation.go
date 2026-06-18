@@ -10,7 +10,10 @@ import (
 
 const dateLayout = "2006-01-02"
 
-func validateTripCreate(t *storage.Trip) map[string]string {
+// ValidateTripCreate validates a trip payload for creation. It returns a map of
+// field → message on failure, or nil when the trip is valid. Exported so the MCP
+// tool layer can enforce the same rules as the REST handlers.
+func ValidateTripCreate(t *storage.Trip) map[string]string {
 	errs := map[string]string{}
 
 	t.Name = strings.TrimSpace(t.Name)
@@ -48,7 +51,10 @@ func validateTripCreate(t *storage.Trip) map[string]string {
 	return errs
 }
 
-func validateTripUpdates(updates map[string]interface{}) map[string]string {
+// ValidateTripUpdates validates a partial-update payload (the same map shape the
+// PATCH handler accepts). It returns a map of field → message on failure, or nil
+// when the patch is valid. Exported for reuse by the MCP tool layer.
+func ValidateTripUpdates(updates map[string]interface{}) map[string]string {
 	errs := map[string]string{}
 	if len(updates) == 0 {
 		return map[string]string{"body": "at least one field is required"}
@@ -144,6 +150,17 @@ func validateTripUpdates(updates map[string]interface{}) map[string]string {
 		}
 	}
 
+	if len(errs) == 0 {
+		return nil
+	}
+	return errs
+}
+
+// ValidateLocations validates a slice of locations on its own (e.g. after a
+// location is added or edited through the MCP tools). Returns nil when valid.
+func ValidateLocations(locations []storage.Location) map[string]string {
+	errs := map[string]string{}
+	validateLocations(errs, locations)
 	if len(errs) == 0 {
 		return nil
 	}
